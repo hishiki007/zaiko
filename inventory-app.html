@@ -175,8 +175,10 @@ tr:hover td { background: #f8fafc; }
     <input class="search" id="q" type="search" placeholder="🔍 部品名・部品番号で検索..." oninput="render()" />
     <button class="btn btn-primary" onclick="openAdd()">＋ 部品追加</button>
     <button class="btn btn-warning" onclick="openTransfer()">↔ 移動</button>
-    <button class="btn btn-outline" onclick="exportCSV()">CSV</button>
-    <button class="btn btn-outline" onclick="exportExcel()">Excel</button>
+    <button class="btn btn-outline" onclick="exportCSV()">CSV出力</button>
+    <button class="btn btn-outline" onclick="exportExcel()">Excel出力</button>
+    <label class="btn btn-outline" for="csv-import-input" style="cursor:pointer;">📥 CSVインポート</label>
+    <input type="file" id="csv-import-input" accept=".csv" style="display:none" onchange="handleCSVImport(event)" />
   </div>
 
   <div class="loc-tabs">
@@ -201,6 +203,21 @@ tr:hover td { background: #f8fafc; }
       </thead>
       <tbody id="tbody"></tbody>
     </table>
+  </div>
+</div>
+
+<!-- CSV Import Modal -->
+<div class="overlay" id="ov-csv" onclick="closeOv('ov-csv',event)">
+  <div class="modal" style="max-width:500px;">
+    <h3>📥 CSVインポート確認</h3>
+    <div id="csv-preview" style="background:var(--bg);border-radius:8px;padding:14px;margin-bottom:16px;font-size:13px;"></div>
+    <div style="background:#fef3c7;border:1px solid #f59e0b;border-radius:8px;padding:12px;font-size:13px;color:#92400e;margin-bottom:16px;">
+      ⚠️ 既存の部品データは<strong>上書き</strong>されます。新規追加のみの場合は既存データはそのままです。
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeOv('ov-csv')">キャンセル</button>
+      <button class="btn btn-primary" id="csv-import-btn" onclick="doCSVImport()">インポート実行</button>
+    </div>
   </div>
 </div>
 
@@ -568,6 +585,113 @@ function renderHist(){
   list.innerHTML=hist.map(h=>`<div class="hi hi-${h.type}"><div class="hi-top"><span class="hi-name">${esc(h.name||'')}</span><span class="hi-time">${fmtDate(h.ts)}</span></div><div class="hi-detail">[${TYPE_LABELS[h.type]||h.type}] ${esc(h.detail||'')}</div></div>`).join('');
 }
 function toggleHist(){ id('hist-panel').classList.toggle('open'); }
+
+// ── CSV Import ──
+let csvImportData = null;
+
+function handleCSVImport(e){
+  const file = e.target.files[0]; if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(ev){
+    const text = ev.target.result;
+    csvImportData = parseImportCSV(text);
+    if(!csvImportData){ toast('CSVの解析に失敗しました'); return; }
+    id('csv-preview').innerHTML = `
+      <strong>インポート内容：</strong><br>
+      部品種類: ${Object.keys(csvImportData).length} 種<br>
+      対象保管場所: シンワ倉庫・アラン・ゆーや・しゅん・たくや<br><br>
+      <strong>サンプル（最初の3件）：</strong><br>
+      ${Object.values(csvImportData).slice(0,3).map(p=>
+        `${p.no} ${p.name}／合計:${Object.values(p.locs).reduce((a,b)=>a+b,0)}`
+      ).join('<br>')}
+    `;
+    open_('ov-csv');
+  };
+  reader.readAsText(file, 'UTF-8');
+  e.target.value = '';
+}
+
+function parseImportCSV(text){
+  // BOM除去
+  if(text.charCodeAt(0)===0xFEFF) text=text.slice(1);
+  const lines = text.split('\n').filter(l=>l.trim());
+  if(lines.length < 2) return null;
+
+  // ヘッダー解析
+  const headers = parseCSVLine(lines[0]);
+  const nameIdx   = headers.findIndex(h=>h.includes('物品名'));
+  const locIdx    = headers.findIndex(h=>h.includes('保管場所'));
+  const qtyIdx    = headers.findIndex(h=>h.includes('数量'));
+  const noIdx     = headers.findIndex(h=>h==='部品番号'||h.includes('部品番号'));
+  const qrIdx     = headers.findIndex(h=>h.includes('QR')||h.includes('バーコード'));
+  if(nameIdx<0||locIdx<0||qtyIdx<0) return null;
+
+  const partNoIdx = noIdx>=0 ? noIdx : qrIdx;
+  const map = {};
+
+  for(let i=1;i<lines.length;i++){
+    const cols = parseCSVLine(lines[i]);
+    if(cols.length < 3) continue;
+    const name = (cols[nameIdx]||'').trim();
+    const loc  = (cols[locIdx]||'').trim();
+    const qty  = parseInt(cols[qtyIdx])||0;
+    const no   = partNoIdx>=0 ? (cols[partNoIdx]||'').trim() : '';
+    if(!name || !LOCS.includes(loc)) continue;
+
+    const key = no || name;
+    if(!map[key]){
+      map[key] = { no, name, locs:{ シンワ倉庫:0, アラン:0, ゆーや:0, しゅん:0, たくや:0 }, updatedAt:Date.now(), createdAt:Date.now() };
+    }
+    map[key].locs[loc] = qty;
+  }
+  return map;
+}
+
+function parseCSVLine(line){
+  const result=[], re=/("(?:[^"]|"")*"|[^,]*)/g;
+  let m;
+  while((m=re.exec(line))!==null){
+    let v=m[1];
+    if(v.startsWith('"')&&v.endsWith('"')) v=v.slice(1,-1).replace(/""/g,'"');
+    result.push(v);
+    if(re.lastIndex===line.length) break;
+  }
+  return result;
+}
+
+async function doCSVImport(){
+  if(!csvImportData){ toast('データがありません'); return; }
+  id('csv-import-btn').disabled=true;
+  id('csv-import-btn').textContent='インポート中...';
+
+  const entries = Object.values(csvImportData);
+  let done=0;
+
+  // 既存部品を部品番号/名前でマップ
+  const existingMap={};
+  Object.entries(parts).forEach(([k,p])=>{
+    if(p.no) existingMap[p.no]=k;
+    existingMap[p.name]=k;
+  });
+
+  for(const p of entries){
+    const existKey = existingMap[p.no]||existingMap[p.name];
+    if(existKey){
+      await db.ref('parts/'+existKey).update({locs:p.locs, updatedAt:Date.now()});
+    } else {
+      await db.ref('parts').push(p);
+    }
+    done++;
+    if(done%50===0) id('csv-import-btn').textContent=`インポート中... ${done}/${entries.length}`;
+  }
+
+  addHist('add','import','CSVインポート',`${entries.length}件インポート完了`);
+  toast(`✅ ${entries.length}件インポートしました`);
+  id('csv-import-btn').disabled=false;
+  id('csv-import-btn').textContent='インポート実行';
+  closeOv('ov-csv');
+  csvImportData=null;
+}
 
 // ── Export ──
 function getExportRows(){
