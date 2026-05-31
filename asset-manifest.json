@@ -1,0 +1,13 @@
+{
+  "files": {
+    "main.css": "/zaiko/static/css/main.2ef7dafa.css",
+    "main.js": "/zaiko/static/js/main.59094379.js",
+    "index.html": "/zaiko/index.html",
+    "main.2ef7dafa.css.map": "/zaiko/static/css/main.2ef7dafa.css.map",
+    "main.59094379.js.map": "/zaiko/static/js/main.59094379.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.2ef7dafa.css",
+    "static/js/main.59094379.js"
+  ]
+}
