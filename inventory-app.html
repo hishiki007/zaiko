@@ -143,6 +143,20 @@ tr:hover td { background: #f8fafc; }
   .table-wrap { padding: 10px 12px 16px; }
   #hist-panel { width: 100%; }
 }
+
+/* Scan modal */
+.scan-drop { border: 2px dashed var(--border); border-radius: 10px; padding: 24px 16px; text-align: center; cursor: pointer; transition: border-color 0.2s; background: var(--bg); }
+.scan-drop:hover { border-color: var(--primary); }
+.scan-drop img { max-width: 100%; max-height: 220px; border-radius: 8px; object-fit: contain; margin-top: 8px; }
+.scan-result-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 6px; font-size: 13px; }
+.scan-result-item.matched { border-color: #86efac; background: #f0fdf4; }
+.scan-result-item.unmatched { border-color: #fca5a5; background: #fef2f2; }
+.scan-result-item input[type=checkbox] { width: 18px; height: 18px; cursor: pointer; }
+.scan-result-item .sri-name { flex: 1; font-weight: 600; }
+.scan-result-item .sri-qty { font-size: 14px; font-weight: 700; color: var(--success); min-width: 60px; text-align: right; }
+.scan-badge { font-size: 10px; padding: 2px 6px; border-radius: 999px; margin-left: 6px; }
+.scan-badge.ok { background: #dcfce7; color: var(--success); }
+.scan-badge.ng { background: #fee2e2; color: var(--danger); }
 </style>
 </head>
 <body>
@@ -165,6 +179,7 @@ tr:hover td { background: #f8fafc; }
     <div class="field"><label>Auth Domain</label><input id="f-auth" placeholder="xxx.firebaseapp.com" /></div>
     <div class="field"><label>Database URL</label><input id="f-db" placeholder="https://xxx.firebasedatabase.app" /></div>
     <div class="field"><label>Project ID</label><input id="f-pid" placeholder="your-project-id" /></div>
+    <div class="field"><label>Anthropic API Key（納品書スキャン用・任意）</label><input id="f-anthropic" placeholder="sk-ant-api03-..." type="password" /></div>
     <button class="btn btn-primary" style="width:100%;padding:11px;margin-top:4px;" onclick="connect()">接続して開始 →</button>
     <p class="err" id="setup-err"></p>
   </div>
@@ -180,6 +195,7 @@ tr:hover td { background: #f8fafc; }
     <button class="btn btn-outline" onclick="exportExcel()">Excel出力</button>
     <label class="btn btn-outline" for="csv-import-input" style="cursor:pointer;">📥 CSVインポート</label>
     <input type="file" id="csv-import-input" accept=".csv" style="display:none" onchange="handleCSVImport(event)" />
+    <button class="btn btn-success" onclick="openScan()" id="scan-btn" style="display:none;">📷 納品書スキャン</button>
   </div>
 
   <div class="loc-tabs">
@@ -332,6 +348,29 @@ tr:hover td { background: #f8fafc; }
   <img id="lightbox-img" src="" alt="" />
 </div>
 
+<!-- Scan Modal -->
+<div class="overlay" id="ov-scan" onclick="closeOv('ov-scan',event)">
+  <div class="modal" style="max-width:500px;">
+    <h3>📷 納品書スキャン → シンワ倉庫へ自動入庫</h3>
+    <div class="scan-drop" id="scan-drop" onclick="id('scan-file').click()">
+      <div id="scan-preview-area">
+        <div style="font-size:36px;">📄</div>
+        <div style="font-size:14px;color:var(--muted);margin-top:8px;">タップして納品書の写真を選択</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:4px;">カメラで撮影またはファイルを選択</div>
+      </div>
+    </div>
+    <input type="file" id="scan-file" accept="image/*" capture="environment" style="display:none" onchange="onScanFileSelect(event)" />
+    <div id="scan-analyze-area" style="margin-top:12px;display:none;">
+      <button class="btn btn-primary" style="width:100%;padding:11px;" onclick="doScanAnalyze()" id="scan-analyze-btn">🤖 AIで解析する</button>
+    </div>
+    <div id="scan-results" style="margin-top:14px;"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeOv('ov-scan')">キャンセル</button>
+      <button class="btn btn-success" id="scan-confirm-btn" onclick="doScanImport()" style="display:none;">✅ シンワ倉庫へ入庫</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 
@@ -348,6 +387,8 @@ function connect() {
   if(typeof firebase==='undefined'){ showErr('Firebase読み込み中です。少し待ってから再度押してください。'); return; }
   const cfg = { apiKey:id('f-key').value.trim(), authDomain:id('f-auth').value.trim(), databaseURL:id('f-db').value.trim(), projectId:id('f-pid').value.trim() };
   if (!cfg.apiKey||!cfg.databaseURL||!cfg.projectId) { showErr('API Key、Database URL、Project ID は必須です'); return; }
+  const anthropicKey=id('f-anthropic').value.trim();
+  if(anthropicKey) localStorage.setItem('anthropic_key', anthropicKey);
   localStorage.setItem('inv_cfg', JSON.stringify(cfg));
   initFB(cfg);
 }
@@ -365,6 +406,7 @@ function initFB(cfg) {
       });
       id('setup').style.display='none';
       id('app').style.display='block';
+      if(localStorage.getItem('anthropic_key')) id('scan-btn').style.display='inline-block';
     }).catch(e => { showErr('認証エラー: '+e.message); });
   } catch(e) { showErr('接続エラー: '+e.message); }
 }
@@ -378,6 +420,7 @@ function tryAutoConnect(){
     id('f-auth').value=c.authDomain||'';
     id('f-db').value=c.databaseURL||'';
     id('f-pid').value=c.projectId||'';
+    const ak=localStorage.getItem('anthropic_key'); if(ak) id('f-anthropic').value=ak;
     if(typeof firebase==='undefined'){
       // Firebaseがまだ読み込まれていない場合は少し待ってリトライ
       setTimeout(tryAutoConnect, 300);
@@ -745,6 +788,130 @@ function exportExcel(){
   }
   XLSX.writeFile(wb,`部品在庫_${today()}.xlsx`);
   toast('📊 Excelをダウンロードしました');
+}
+
+// ── Scan (納品書スキャン) ──
+let scanImageBase64 = null, scanImageMime = null, scanParsedItems = [];
+
+function openScan(){
+  scanImageBase64=null; scanImageMime=null; scanParsedItems=[];
+  id('scan-preview-area').innerHTML='<div style="font-size:36px;">📄</div><div style="font-size:14px;color:var(--muted);margin-top:8px;">タップして納品書の写真を選択</div><div style="font-size:12px;color:var(--muted);margin-top:4px;">カメラで撮影またはファイルを選択</div>';
+  id('scan-analyze-area').style.display='none';
+  id('scan-results').innerHTML='';
+  id('scan-confirm-btn').style.display='none';
+  id('scan-file').value='';
+  open_('ov-scan');
+}
+
+function onScanFileSelect(e){
+  const file=e.target.files[0]; if(!file) return;
+  scanImageMime=file.type||'image/jpeg';
+  const reader=new FileReader();
+  reader.onload=function(ev){
+    scanImageBase64=ev.target.result.split(',')[1];
+    id('scan-preview-area').innerHTML=`<img src="${ev.target.result}" style="max-width:100%;max-height:220px;border-radius:8px;object-fit:contain;" />`;
+    id('scan-analyze-area').style.display='block';
+    id('scan-results').innerHTML='';
+    id('scan-confirm-btn').style.display='none';
+  };
+  reader.readAsDataURL(file);
+}
+
+async function doScanAnalyze(){
+  const apiKey=localStorage.getItem('anthropic_key');
+  if(!apiKey){ toast('APIキーが設定されていません。設定画面から再接続してください。'); return; }
+  if(!scanImageBase64){ toast('画像を選択してください'); return; }
+
+  const btn=id('scan-analyze-btn');
+  btn.disabled=true; btn.textContent='🤖 解析中...';
+  id('scan-results').innerHTML='<div style="text-align:center;padding:16px;color:var(--muted);">AIが納品書を読み取っています...</div>';
+
+  try {
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{
+        'x-api-key':apiKey,
+        'anthropic-version':'2023-06-01',
+        'content-type':'application/json',
+        'anthropic-dangerous-direct-browser-access':'true'
+      },
+      body:JSON.stringify({
+        model:'claude-haiku-4-5',
+        max_tokens:1024,
+        messages:[{
+          role:'user',
+          content:[
+            {type:'image',source:{type:'base64',media_type:scanImageMime,data:scanImageBase64}},
+            {type:'text',text:'この納品明細書から商品コード（部品番号）と数量を全て抽出してください。JSONのみ返してください（説明文不要）。形式: [{"code":"商品コード","qty":数量}]'}
+          ]
+        }]
+      })
+    });
+    if(!res.ok){const e=await res.json();throw new Error(e.error?.message||'API Error');}
+    const data=await res.json();
+    const text=data.content[0].text;
+    const match=text.match(/\[[\s\S]*?\]/);
+    if(!match) throw new Error('解析結果が読み取れませんでした');
+    scanParsedItems=JSON.parse(match[0]);
+    renderScanResults();
+  } catch(e){
+    id('scan-results').innerHTML=`<div style="color:var(--danger);padding:12px;background:#fef2f2;border-radius:8px;">エラー: ${esc(e.message)}</div>`;
+  }
+  btn.disabled=false; btn.textContent='🤖 AIで解析する';
+}
+
+function renderScanResults(){
+  if(!scanParsedItems.length){
+    id('scan-results').innerHTML='<div style="text-align:center;padding:16px;color:var(--muted);">部品が検出されませんでした</div>';
+    return;
+  }
+  // 部品番号でマッチング
+  const partsByNo={};
+  Object.entries(parts).forEach(([k,p])=>{ if(p.no) partsByNo[String(p.no).trim()]=k; });
+
+  let html='<div style="font-size:13px;font-weight:700;color:var(--muted);margin-bottom:8px;">検出された部品（チェックしたものを入庫）</div>';
+  scanParsedItems=scanParsedItems.map((item,i)=>{
+    const matchKey=partsByNo[String(item.code).trim()];
+    const matchPart=matchKey?parts[matchKey]:null;
+    item._key=matchKey||null;
+    item._checked=!!matchKey;
+    html+=`<div class="scan-result-item ${matchKey?'matched':'unmatched'}" id="sri-${i}">
+      <input type="checkbox" id="sri-chk-${i}" ${matchKey?'checked':''} onchange="scanParsedItems[${i}]._checked=this.checked">
+      <div class="sri-name">
+        <span style="font-family:monospace;font-size:12px;">${esc(item.code)}</span>
+        <span class="scan-badge ${matchKey?'ok':'ng'}">${matchKey?'✓ 一致':'✗ 未登録'}</span>
+        ${matchPart?`<div style="font-size:11px;color:var(--muted);">${esc(matchPart.name)}</div>`:''}
+      </div>
+      <div class="sri-qty">+${item.qty}</div>
+    </div>`;
+    return item;
+  });
+  id('scan-results').innerHTML=html;
+  id('scan-confirm-btn').style.display='inline-block';
+}
+
+async function doScanImport(){
+  const targets=scanParsedItems.filter(item=>item._checked&&item._key);
+  if(!targets.length){ toast('入庫対象がありません（一致する部品にチェックが必要です）'); return; }
+
+  const btn=id('scan-confirm-btn');
+  btn.disabled=true; btn.textContent='入庫中...';
+
+  for(const item of targets){
+    const p=parts[item._key]; if(!p) continue;
+    const cur=(p.locs||{})['シンワ倉庫']||0;
+    const nv=cur+item.qty;
+    const upd={};
+    upd[`parts/${item._key}/locs/シンワ倉庫`]=nv;
+    upd[`parts/${item._key}/updatedAt`]=Date.now();
+    await db.ref().update(upd);
+    addHist('in',item._key,p.name,`入庫（納品書スキャン）シンワ倉庫: ${cur}→${nv}`);
+    lastOpKey=item._key;
+  }
+
+  toast(`✅ ${targets.length}件をシンワ倉庫へ入庫しました`);
+  btn.disabled=false; btn.textContent='✅ シンワ倉庫へ入庫';
+  closeOv('ov-scan');
 }
 
 // ── Helpers ──
