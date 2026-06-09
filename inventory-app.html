@@ -6,6 +6,7 @@
 <title>部品在庫管理</title>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 :root {
@@ -354,15 +355,17 @@ function initFB(cfg) {
   try {
     if (firebase.apps.length) firebase.app().delete().catch(()=>{});
     firebase.initializeApp(cfg);
-    db = firebase.database();
-    db.ref('.info/connected').on('value', s => { id('dot').className='dot'+(s.val()?'':' off'); });
-    db.ref('parts').on('value', s => { parts=s.val()||{}; render(); updateTabs(); fillTrParts(); });
-    db.ref('history').limitToLast(100).on('child_added', s => {
-      const v=s.val(); hist.unshift(v); if(hist.length>100) hist.pop();
-      renderHist(); if(openPartKey) renderPartHistModal();
-    });
-    id('setup').style.display='none';
-    id('app').style.display='block';
+    firebase.auth().signInAnonymously().then(() => {
+      db = firebase.database();
+      db.ref('.info/connected').on('value', s => { id('dot').className='dot'+(s.val()?'':' off'); });
+      db.ref('parts').on('value', s => { parts=s.val()||{}; render(); updateTabs(); fillTrParts(); });
+      db.ref('history').limitToLast(100).on('child_added', s => {
+        const v=s.val(); hist.unshift(v); if(hist.length>100) hist.pop();
+        renderHist(); if(openPartKey) renderPartHistModal();
+      });
+      id('setup').style.display='none';
+      id('app').style.display='block';
+    }).catch(e => { showErr('認証エラー: '+e.message); });
   } catch(e) { showErr('接続エラー: '+e.message); }
 }
 function doLogout() { if(confirm('設定画面に戻りますか？')){localStorage.removeItem('inv_cfg');location.reload();} }
