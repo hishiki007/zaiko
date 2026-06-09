@@ -352,14 +352,14 @@ tr:hover td { background: #f8fafc; }
 <div class="overlay" id="ov-scan" onclick="closeOv('ov-scan',event)">
   <div class="modal" style="max-width:500px;">
     <h3>📷 納品書スキャン → シンワ倉庫へ自動入庫</h3>
-    <div class="scan-drop" id="scan-drop" style="position:relative;overflow:hidden;">
-      <div id="scan-preview-area">
-        <div style="font-size:36px;">📄</div>
-        <div style="font-size:14px;color:var(--muted);margin-top:8px;">タップして納品書の写真を選択</div>
-        <div style="font-size:12px;color:var(--muted);margin-top:4px;">カメラで撮影またはギャラリーから選択</div>
-      </div>
-      <input type="file" id="scan-file" accept="image/*" onchange="onScanFileSelect(event)"
-        style="position:absolute;top:0;left:0;width:100%;height:100%;opacity:0;cursor:pointer;" />
+    <div id="scan-preview-area" style="text-align:center;padding:12px 0 8px;">
+      <div style="font-size:40px;">📄</div>
+      <div style="font-size:13px;color:var(--muted);margin-top:4px;">納品書の写真を選択してください</div>
+    </div>
+    <input type="file" id="scan-file" accept="image/*" onchange="onScanFileSelect(event)"
+      style="display:block;width:100%;margin-top:10px;padding:12px;border:2px dashed var(--border);border-radius:10px;background:var(--bg);font-size:14px;cursor:pointer;color:var(--text);" />
+    <div id="scan-img-preview" style="margin-top:10px;text-align:center;display:none;">
+      <img id="scan-img-el" style="max-width:100%;max-height:200px;border-radius:8px;object-fit:contain;" />
     </div>
     <div id="scan-analyze-area" style="margin-top:12px;display:none;">
       <button class="btn btn-primary" style="width:100%;padding:11px;" onclick="doScanAnalyze()" id="scan-analyze-btn">🤖 AIで解析する</button>
@@ -796,10 +796,10 @@ let scanImageBase64 = null, scanImageMime = null, scanParsedItems = [];
 
 function openScan(){
   scanImageBase64=null; scanImageMime=null; scanParsedItems=[];
-  id('scan-preview-area').innerHTML='<div style="font-size:36px;">📄</div><div style="font-size:14px;color:var(--muted);margin-top:8px;">タップして納品書の写真を選択</div><div style="font-size:12px;color:var(--muted);margin-top:4px;">カメラで撮影またはギャラリーから選択</div>';
   id('scan-analyze-area').style.display='none';
   id('scan-results').innerHTML='';
   id('scan-confirm-btn').style.display='none';
+  id('scan-img-preview').style.display='none';
   id('scan-file').value='';
   open_('ov-scan');
 }
@@ -810,7 +810,8 @@ function onScanFileSelect(e){
   const reader=new FileReader();
   reader.onload=function(ev){
     scanImageBase64=ev.target.result.split(',')[1];
-    id('scan-preview-area').innerHTML=`<img src="${ev.target.result}" style="max-width:100%;max-height:220px;border-radius:8px;object-fit:contain;" />`;
+    id('scan-img-el').src=ev.target.result;
+    id('scan-img-preview').style.display='block';
     id('scan-analyze-area').style.display='block';
     id('scan-results').innerHTML='';
     id('scan-confirm-btn').style.display='none';
