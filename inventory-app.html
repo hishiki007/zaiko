@@ -352,14 +352,14 @@ tr:hover td { background: #f8fafc; }
 <div class="overlay" id="ov-scan" onclick="closeOv('ov-scan',event)">
   <div class="modal" style="max-width:500px;">
     <h3>📷 納品書スキャン → シンワ倉庫へ自動入庫</h3>
-    <div class="scan-drop" id="scan-drop" onclick="id('scan-file').click()">
+    <label for="scan-file" class="scan-drop" id="scan-drop" style="display:block;cursor:pointer;">
       <div id="scan-preview-area">
         <div style="font-size:36px;">📄</div>
         <div style="font-size:14px;color:var(--muted);margin-top:8px;">タップして納品書の写真を選択</div>
         <div style="font-size:12px;color:var(--muted);margin-top:4px;">カメラで撮影またはファイルを選択</div>
       </div>
-    </div>
-    <input type="file" id="scan-file" accept="image/*" capture="environment" style="display:none" onchange="onScanFileSelect(event)" />
+    </label>
+    <input type="file" id="scan-file" accept="image/*" style="display:none" onchange="onScanFileSelect(event)" />
     <div id="scan-analyze-area" style="margin-top:12px;display:none;">
       <button class="btn btn-primary" style="width:100%;padding:11px;" onclick="doScanAnalyze()" id="scan-analyze-btn">🤖 AIで解析する</button>
     </div>
@@ -795,7 +795,7 @@ let scanImageBase64 = null, scanImageMime = null, scanParsedItems = [];
 
 function openScan(){
   scanImageBase64=null; scanImageMime=null; scanParsedItems=[];
-  id('scan-preview-area').innerHTML='<div style="font-size:36px;">📄</div><div style="font-size:14px;color:var(--muted);margin-top:8px;">タップして納品書の写真を選択</div><div style="font-size:12px;color:var(--muted);margin-top:4px;">カメラで撮影またはファイルを選択</div>';
+  id('scan-preview-area').innerHTML='<div style="font-size:36px;">📄</div><div style="font-size:14px;color:var(--muted);margin-top:8px;">タップして納品書の写真を選択</div><div style="font-size:12px;color:var(--muted);margin-top:4px;">カメラで撮影またはギャラリーから選択</div>';
   id('scan-analyze-area').style.display='none';
   id('scan-results').innerHTML='';
   id('scan-confirm-btn').style.display='none';
