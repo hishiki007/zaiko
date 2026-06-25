@@ -443,7 +443,8 @@ function updateTabs(){
 function render(){
   const q=id('q').value.toLowerCase();
   let rows=Object.entries(parts).map(([k,p])=>({k,...p}));
-  if(curLoc!=='all') rows=rows.filter(r=>r.locs&&(r.locs[curLoc]||0)>0);
+  // 検索なし：在庫あり部品のみ表示。検索あり：0でも表示（どこにあるか確認できるように）
+  if(curLoc!=='all' && !q) rows=rows.filter(r=>r.locs&&(r.locs[curLoc]||0)>0);
   if(q) rows=rows.filter(r=>(r.name||'').toLowerCase().includes(q)||(r.no||'').toLowerCase().includes(q));
 
   // 最終操作部品を先頭、残りは更新日時順
