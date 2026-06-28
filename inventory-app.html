@@ -187,6 +187,7 @@ tr:hover td { background: #f8fafc; }
 
 <!-- App -->
 <div id="app">
+  <div style="position:sticky;top:56px;z-index:99;background:var(--card);">
   <div class="toolbar">
     <input class="search" id="q" type="search" placeholder="🔍 部品名・部品番号で検索..." oninput="render()" />
     <button class="btn btn-primary" onclick="openAdd()">＋ 部品追加</button>
@@ -206,6 +207,7 @@ tr:hover td { background: #f8fafc; }
     <div class="loc-tab" data-loc="しゅん" onclick="setLocTab(this,'しゅん')">しゅん<span class="cnt" id="cnt-3">0</span></div>
     <div class="loc-tab" data-loc="たくや" onclick="setLocTab(this,'たくや')">たくや<span class="cnt" id="cnt-4">0</span></div>
   </div>
+  </div><!-- /sticky wrapper end -->
 
   <div class="table-wrap">
     <table>
