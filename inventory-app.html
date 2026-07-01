@@ -180,6 +180,8 @@ tr:hover td { background: #f8fafc; }
     <div class="field"><label>Database URL</label><input id="f-db" placeholder="https://xxx.firebasedatabase.app" /></div>
     <div class="field"><label>Project ID</label><input id="f-pid" placeholder="your-project-id" /></div>
     <div class="field"><label>Anthropic API Key（納品書スキャン用・任意）</label><input id="f-anthropic" placeholder="sk-ant-api03-..." type="password" /></div>
+    <div class="field"><label>Supabase URL（写真保存用・任意）</label><input id="f-sb-url" placeholder="https://xxxx.supabase.co" /></div>
+    <div class="field"><label>Supabase Anon Key（写真保存用・任意）</label><input id="f-sb-key" placeholder="eyJ..." type="password" /></div>
     <button class="btn btn-primary" style="width:100%;padding:11px;margin-top:4px;" onclick="connect()">接続して開始 →</button>
     <p class="err" id="setup-err"></p>
   </div>
@@ -374,6 +376,30 @@ tr:hover td { background: #f8fafc; }
   </div>
 </div>
 
+<!-- Photo Modal -->
+<div class="overlay" id="ov-photo" onclick="closeOv('ov-photo',event)">
+  <div class="modal" style="max-width:500px;">
+    <h3>📸 <span id="photo-title"></span> の写真</h3>
+    <div id="photo-grid" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;min-height:50px;"></div>
+    <div id="photo-upload-area">
+      <div style="display:flex;gap:8px;">
+        <label class="btn btn-primary" style="flex:1;text-align:center;cursor:pointer;" for="photo-camera">
+          📷 カメラで撮影
+        </label>
+        <label class="btn btn-outline" style="flex:1;text-align:center;cursor:pointer;" for="photo-gallery">
+          🖼 アルバムから選択
+        </label>
+      </div>
+      <input type="file" id="photo-camera" accept="image/*" capture="environment" style="display:none" onchange="handlePhotoFile(event)" />
+      <input type="file" id="photo-gallery" accept="image/*" style="display:none" onchange="handlePhotoFile(event)" />
+      <div id="photo-status" style="margin-top:10px;font-size:13px;color:var(--muted);text-align:center;min-height:20px;"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeOv('ov-photo')">閉じる</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 
@@ -384,6 +410,9 @@ let db=null, parts={}, hist=[];
 let curLoc='all', skMode='in', lastOpKey=null;
 let partHistRef=null;
 let openPartKey=null; // 履歴モーダルで表示中の部品キー
+let supabaseUrl='', supabaseKey='';
+const PHOTO_BUCKET='parts-photos';
+let photoPartKey=null;
 
 // ── Firebase ──
 function connect() {
@@ -392,6 +421,9 @@ function connect() {
   if (!cfg.apiKey||!cfg.databaseURL||!cfg.projectId) { showErr('API Key、Database URL、Project ID は必須です'); return; }
   const anthropicKey=id('f-anthropic').value.trim();
   if(anthropicKey) localStorage.setItem('anthropic_key', anthropicKey);
+  const sbUrl=id('f-sb-url').value.trim(), sbKey=id('f-sb-key').value.trim();
+  if(sbUrl) localStorage.setItem('sb_url', sbUrl);
+  if(sbKey) localStorage.setItem('sb_key', sbKey);
   localStorage.setItem('inv_cfg', JSON.stringify(cfg));
   initFB(cfg);
 }
@@ -410,6 +442,8 @@ function initFB(cfg) {
       id('setup').style.display='none';
       id('app').style.display='block';
       if(localStorage.getItem('anthropic_key')) id('scan-btn').style.display='inline-block';
+      const sbUrl2=localStorage.getItem('sb_url'), sbKey2=localStorage.getItem('sb_key');
+      if(sbUrl2 && sbKey2){ supabaseUrl=sbUrl2.replace(/\/$/,''); supabaseKey=sbKey2; }
     }).catch(e => { showErr('認証エラー: '+e.message); });
   } catch(e) { showErr('接続エラー: '+e.message); }
 }
@@ -424,6 +458,8 @@ function tryAutoConnect(){
     id('f-db').value=c.databaseURL||'';
     id('f-pid').value=c.projectId||'';
     const ak=localStorage.getItem('anthropic_key'); if(ak) id('f-anthropic').value=ak;
+    const sbU=localStorage.getItem('sb_url'); if(sbU) id('f-sb-url').value=sbU;
+    const sbK=localStorage.getItem('sb_key'); if(sbK) id('f-sb-key').value=sbK;
     if(typeof firebase==='undefined'){
       // Firebaseがまだ読み込まれていない場合は少し待ってリトライ
       setTimeout(tryAutoConnect, 300);
@@ -465,10 +501,13 @@ function render(){
       ?`<div class="loc-chips">${LOCS.map(l=>`<span class="loc-chip ${(locs[l]||0)>0?'has':''}">${l}: ${locs[l]||0}</span>`).join('')}</div>`
       :`<span class="qty-cell ${(locs[curLoc]||0)===0?'zero':''}">${locs[curLoc]||0}</span>`;
     const isLast = r.k===lastOpKey;
+    const photos = r.photos||[];
+    const thumb = photos.length>0
+      ? `<img src="${photos[0]}" onclick="openPhotoModal('${r.k}')" style="width:36px;height:36px;object-fit:cover;border-radius:5px;border:1px solid var(--border);margin-right:6px;vertical-align:middle;cursor:pointer;flex-shrink:0;" />`
+      : (supabaseUrl ? `<span onclick="openPhotoModal('${r.k}')" style="display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:5px;border:1px dashed var(--border);background:var(--bg);font-size:16px;margin-right:6px;cursor:pointer;vertical-align:middle;flex-shrink:0;">📷</span>` : '');
     return `<tr id="row-${r.k}" style="${isLast?'background:#eff6ff;border-left:3px solid var(--primary);':''}">
       <td style="font-family:monospace;font-size:12px;color:var(--muted);">${esc(r.no||'—')}</td>
-      <td style="font-weight:600;">${esc(r.name||'')}${isLast?` <span style="font-size:11px;background:#dbeafe;color:var(--primary);padding:1px 6px;border-radius:999px;margin-left:4px;">操作済</span>`:''}
-      </td>
+      <td style="font-weight:600;"><div style="display:flex;align-items:center;">${thumb}<span>${esc(r.name||'')}${isLast?` <span style="font-size:11px;background:#dbeafe;color:var(--primary);padding:1px 6px;border-radius:999px;margin-left:4px;">操作済</span>`:''}</span></div></td>
       <td>${locCell}</td>
       <td><span class="qty-cell ${total===0?'zero':''}">${total}</span></td>
       <td><div class="acts">
@@ -918,6 +957,93 @@ async function doScanImport(){
   btn.disabled=false; btn.textContent='✅ シンワ倉庫へ入庫';
   closeOv('ov-scan');
 }
+
+// ── Photo Management ──
+function openPhotoModal(key){
+  const p=parts[key]; if(!p) return;
+  photoPartKey=key;
+  id('photo-title').textContent=p.name;
+  id('photo-status').textContent='';
+  id('photo-camera').value='';
+  id('photo-gallery').value='';
+  id('photo-upload-area').style.display=supabaseUrl?'block':'none';
+  if(!supabaseUrl) id('photo-grid').innerHTML=`<div style="color:var(--muted);font-size:13px;">Supabase未設定のため写真機能は利用できません。<br>設定画面からSupabase URLとAnon Keyを入力してください。</div>`;
+  else renderPhotoGrid(key);
+  open_('ov-photo');
+}
+
+function renderPhotoGrid(key){
+  const photos=(parts[key]||{}).photos||[];
+  const grid=id('photo-grid');
+  if(!photos.length){ grid.innerHTML=`<div style="color:var(--muted);font-size:13px;padding:4px;">写真はまだありません</div>`; return; }
+  grid.innerHTML=photos.map((url,i)=>`
+    <div style="position:relative;">
+      <img src="${url}" onclick="showLightbox('${url}')"
+        style="width:88px;height:88px;object-fit:cover;border-radius:8px;cursor:pointer;border:1px solid var(--border);" />
+      <button onclick="deletePhoto('${key}',${i})"
+        style="position:absolute;top:3px;right:3px;width:22px;height:22px;border-radius:50%;background:rgba(220,38,38,0.85);color:white;border:none;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>
+    </div>`).join('');
+}
+
+async function compressImage(file){
+  return new Promise(resolve=>{
+    const img=new Image();
+    const objUrl=URL.createObjectURL(file);
+    img.onload=()=>{
+      URL.revokeObjectURL(objUrl);
+      const MAX=800;
+      let w=img.naturalWidth, h=img.naturalHeight;
+      if(w>h){ if(w>MAX){h=Math.round(h*MAX/w);w=MAX;} }
+      else { if(h>MAX){w=Math.round(w*MAX/h);h=MAX;} }
+      const canvas=document.createElement('canvas');
+      canvas.width=w; canvas.height=h;
+      canvas.getContext('2d').drawImage(img,0,0,w,h);
+      canvas.toBlob(b=>resolve(b),'image/jpeg',0.5);
+    };
+    img.src=objUrl;
+  });
+}
+
+async function handlePhotoFile(e){
+  const file=e.target.files[0]; if(!file) return;
+  if(!supabaseUrl){ toast('Supabaseが設定されていません'); return; }
+  const status=id('photo-status');
+  status.textContent='圧縮中...';
+  try{
+    const blob=await compressImage(file);
+    const kb=Math.round(blob.size/1024);
+    status.textContent=`アップロード中... (${kb}KB)`;
+    const path=`${photoPartKey}/${Date.now()}.jpg`;
+    const res=await fetch(`${supabaseUrl}/storage/v1/object/${PHOTO_BUCKET}/${path}`,{
+      method:'POST',
+      headers:{'Authorization':`Bearer ${supabaseKey}`,'Content-Type':'image/jpeg'},
+      body:blob
+    });
+    if(!res.ok){ const er=await res.json(); throw new Error(er.error||er.message||'アップロード失敗'); }
+    const url=`${supabaseUrl}/storage/v1/object/public/${PHOTO_BUCKET}/${path}`;
+    const photos=[...((parts[photoPartKey]||{}).photos||[]),url];
+    await db.ref(`parts/${photoPartKey}`).update({photos,updatedAt:Date.now()});
+    toast('✅ 写真をアップロードしました');
+    status.textContent='';
+    e.target.value='';
+    renderPhotoGrid(photoPartKey);
+  }catch(err){
+    status.textContent='❌ '+err.message;
+    toast('❌ '+err.message);
+  }
+}
+
+async function deletePhoto(key,idx){
+  if(!confirm('この写真を削除しますか？')) return;
+  const photos=[...((parts[key]||{}).photos||[])];
+  photos.splice(idx,1);
+  await db.ref(`parts/${key}`).update({photos,updatedAt:Date.now()});
+  renderPhotoGrid(key);
+  toast('🗑 写真を削除しました');
+}
+
+function showLightbox(url){ id('lightbox-img').src=url; id('lightbox').classList.add('open'); }
+function closeLightbox(){ id('lightbox').classList.remove('open'); id('lightbox-img').src=''; }
 
 // ── Helpers ──
 function id(x){return document.getElementById(x);}
