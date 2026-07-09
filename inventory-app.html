@@ -1096,26 +1096,41 @@ function openQR(){
   id('qr-manual').value='';
   open_('ov-qr');
 }
-function onQRPhotoSelect(e){
+async function onQRPhotoSelect(e){
   const file=e.target.files[0]; if(!file) return;
+  e.target.value='';
   toast('📷 解析中...');
   id('qr-result').innerHTML=`<div style="padding:8px 12px;background:#f8fafc;border-radius:6px;font-size:13px;color:var(--muted);">📷 解析中...</div>`;
-  const img=new Image();
-  const objUrl=URL.createObjectURL(file);
-  img.onload=()=>{
-    URL.revokeObjectURL(objUrl);
-    const code=findQRInImage(img);
-    if(code){
-      toast('✅ QR読取: '+code);
-      lookupQR(code);
-    } else {
-      toast('❌ QRコードを読み取れませんでした');
-      id('qr-result').innerHTML=`<div style="padding:12px;background:#fef2f2;border-radius:8px;color:var(--danger);font-size:13px;">読み取れませんでした。QRコードが正面を向き、明るい場所で撮影してください。</div>`;
-    }
-  };
-  img.onerror=()=>{ toast('画像の読み込みに失敗しました'); };
-  img.src=objUrl;
-  e.target.value='';
+
+  let code=null;
+
+  // 方法1: BarcodeDetector（iOS17+）でファイルを直接デコード — 最も確実
+  if(barcodeDetector){
+    try{
+      const bitmap=await createImageBitmap(file);
+      const codes=await barcodeDetector.detect(bitmap);
+      if(codes.length>0) code=codes[0].rawValue;
+    }catch(err){ console.log('BarcodeDetector error:',err); }
+  }
+
+  // 方法2: jsQR（フォールバック）
+  if(!code){
+    code=await new Promise(resolve=>{
+      const img=new Image();
+      const objUrl=URL.createObjectURL(file);
+      img.onload=()=>{ URL.revokeObjectURL(objUrl); resolve(findQRInImage(img)); };
+      img.onerror=()=>{ URL.revokeObjectURL(objUrl); resolve(null); };
+      img.src=objUrl;
+    });
+  }
+
+  if(code){
+    toast('✅ QR読取: '+code);
+    lookupQR(code);
+  } else {
+    toast('❌ 読み取れませんでした');
+    id('qr-result').innerHTML=`<div style="padding:12px;background:#fef2f2;border-radius:8px;color:var(--danger);font-size:13px;">読み取れませんでした。明るい場所でQRコードに正対して撮影してください。</div>`;
+  }
 }
 
 function findQRInImage(img){
