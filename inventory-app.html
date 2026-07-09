@@ -1169,15 +1169,25 @@ function qrTick(){
     qrCtx.drawImage(v,0,0,qrCanvas.width,qrCanvas.height);
     const img=qrCtx.getImageData(0,0,qrCanvas.width,qrCanvas.height);
     const code=window.jsQR?jsQR(img.data,img.width,img.height):null;
-    if(code&&code.data){ stopQRScan(); lookupQR(code.data); return; }
+    if(code&&code.data){
+      stopQRScan();
+      // 読み取った値を入力欄にもセット（デバッグ用）
+      id('qr-manual').value=code.data;
+      id('qr-result').innerHTML=`<div style="padding:6px 10px;background:#f0fdf4;border-radius:6px;font-size:12px;color:#166534;margin-bottom:6px;">📷 読み取り: ${esc(code.data)}</div>`;
+      lookupQR(code.data); return;
+    }
   }
   requestAnimationFrame(qrTick);
 }
 function lookupQR(value){
   const v=(value||'').trim(); if(!v) return;
-  const match=Object.entries(parts).find(([k,p])=>String(p.no||'').trim()===v);
+  const vl=v.toLowerCase();
+  // まず完全一致、次に部品番号の部分一致、最後に部品名の部分一致
+  let match=Object.entries(parts).find(([k,p])=>String(p.no||'').trim()===v);
+  if(!match) match=Object.entries(parts).find(([k,p])=>String(p.no||'').toLowerCase().includes(vl));
+  if(!match) match=Object.entries(parts).find(([k,p])=>(p.name||'').toLowerCase().includes(vl));
   if(!match){
-    id('qr-result').innerHTML=`<div style="padding:12px;background:#fef2f2;border-radius:8px;color:var(--danger);font-size:13px;">「${esc(v)}」に一致する部品が見つかりません</div>`;
+    id('qr-result').innerHTML=`<div style="padding:12px;background:#fef2f2;border-radius:8px;color:var(--danger);font-size:13px;">「${esc(v)}」に一致する部品が見つかりません<br><span style="font-size:11px;color:var(--muted);">部品番号または部品名で検索します</span></div>`;
     return;
   }
   const [key,p]=match;
