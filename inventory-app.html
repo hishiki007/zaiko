@@ -4,13 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>メリタ部品在庫管理</title>
-<link rel="apple-touch-icon" href="data:image/png;base64,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" />
+<link rel="apple-touch-icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAYAAAA9zQYyAAAevUlEQVR4nO2dd3gU1frHvzM723eT3SSEkNBCEZQiiKCgKAgqRRQEFEEJV0SKyvVeitgRsF29F853L38Y" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-title" content="メリタ在庫" />
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsqr/1.4.0/jsQR.js"></script>
 <style>
 :root {
   --primary: #2563eb; --primary-dark: #1d4ed8;
@@ -76,7 +77,6 @@ tr:hover td { background: #f8fafc; }
 .loc-chip { font-size: 11px; padding: 2px 7px; border-radius: 999px; border: 1px solid var(--border); background: var(--bg); white-space: nowrap; }
 .loc-chip.has { background: #dcfce7; border-color: #86efac; color: var(--success); font-weight: 600; }
 
-/* Part photo thumbnail */
 .part-thumb { width: 40px; height: 40px; border-radius: 6px; object-fit: cover; border: 1px solid var(--border); cursor: pointer; }
 .part-thumb-none { width: 40px; height: 40px; border-radius: 6px; border: 1px dashed var(--border); display: flex; align-items: center; justify-content: center; font-size: 18px; color: var(--border); }
 
@@ -91,17 +91,14 @@ tr:hover td { background: #f8fafc; }
 .modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
 .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 
-/* Photo upload area */
 .photo-area { border: 2px dashed var(--border); border-radius: 10px; padding: 16px; text-align: center; cursor: pointer; transition: border-color 0.2s; margin-bottom: 4px; }
 .photo-area:hover { border-color: var(--primary); }
 .photo-area img { max-width: 100%; max-height: 160px; border-radius: 8px; object-fit: contain; }
 .photo-area .ph-hint { color: var(--muted); font-size: 13px; margin-top: 8px; }
 .photo-area .ph-icon { font-size: 32px; }
 
-/* Transfer */
 .transfer-preview { background: var(--bg); border-radius: 8px; padding: 12px; font-size: 13px; color: var(--muted); text-align: center; margin-top: 8px; }
 
-/* History panel (global) */
 #hist-panel { position: fixed; right: 0; top: 56px; bottom: 0; width: 320px; background: var(--card); border-left: 1px solid var(--border); transform: translateX(100%); transition: transform 0.3s; z-index: 150; display: flex; flex-direction: column; }
 #hist-panel.open { transform: translateX(0); }
 .panel-head { padding: 14px 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; font-weight: 700; font-size: 14px; }
@@ -119,7 +116,6 @@ tr:hover td { background: #f8fafc; }
 .hi-in { border-left: 3px solid var(--success); }
 .hi-out { border-left: 3px solid var(--danger); }
 
-/* Part history modal */
 .part-hist-item { padding: 10px 12px; border-radius: 8px; margin-bottom: 6px; border: 1px solid var(--border); font-size: 13px; }
 .part-hist-item .phi-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px; }
 .part-hist-item .phi-type { font-weight: 700; font-size: 12px; padding: 2px 8px; border-radius: 999px; }
@@ -132,7 +128,6 @@ tr:hover td { background: #f8fafc; }
 .type-set { background: #ede9fe; color: #7c3aed; }
 .phi-detail { color: var(--muted); font-size: 12px; }
 
-/* Image lightbox */
 #lightbox { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: flex; align-items: center; justify-content: center; z-index: 500; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
 #lightbox.open { opacity: 1; pointer-events: all; }
 #lightbox img { max-width: 90vw; max-height: 85vh; border-radius: 10px; object-fit: contain; }
@@ -147,7 +142,6 @@ tr:hover td { background: #f8fafc; }
   #hist-panel { width: 100%; }
 }
 
-/* Scan modal */
 .scan-drop { border: 2px dashed var(--border); border-radius: 10px; padding: 24px 16px; text-align: center; cursor: pointer; transition: border-color 0.2s; background: var(--bg); }
 .scan-drop:hover { border-color: var(--primary); }
 .scan-drop img { max-width: 100%; max-height: 220px; border-radius: 8px; object-fit: contain; margin-top: 8px; }
@@ -168,12 +162,12 @@ tr:hover td { background: #f8fafc; }
   <h1>🔧 部品在庫管理</h1>
   <div class="header-right">
     <span class="dot" id="dot"></span>
+    <button class="btn btn-ghost btn-sm" onclick="openOperatorModal()">👤 <span id="cur-op-label">未選択</span></button>
     <button class="btn btn-ghost btn-sm" onclick="toggleHist()">全履歴</button>
     <button class="btn btn-ghost btn-sm" onclick="doLogout()">設定</button>
   </div>
 </header>
 
-<!-- Setup -->
 <div id="setup">
   <div class="card">
     <h2>🔥 Firebase 設定</h2>
@@ -190,7 +184,6 @@ tr:hover td { background: #f8fafc; }
   </div>
 </div>
 
-<!-- App -->
 <div id="app">
   <div style="position:-webkit-sticky;position:sticky;top:56px;z-index:99;background:var(--card);box-shadow:0 2px 6px rgba(0,0,0,0.08);">
   <div class="toolbar">
@@ -202,6 +195,7 @@ tr:hover td { background: #f8fafc; }
     <label class="btn btn-outline" for="csv-import-input" style="cursor:pointer;">📥 CSVインポート</label>
     <input type="file" id="csv-import-input" accept=".csv" style="display:none" onchange="handleCSVImport(event)" />
     <button class="btn btn-success" onclick="openScan()" id="scan-btn" style="display:none;">📷 納品書スキャン</button>
+    <button class="btn btn-success" onclick="openQR()">📱 QRスキャン</button>
   </div>
 
   <div class="loc-tabs">
@@ -212,7 +206,7 @@ tr:hover td { background: #f8fafc; }
     <div class="loc-tab" data-loc="しゅん" onclick="setLocTab(this,'しゅん')">しゅん<span class="cnt" id="cnt-3">0</span></div>
     <div class="loc-tab" data-loc="たくや" onclick="setLocTab(this,'たくや')">たくや<span class="cnt" id="cnt-4">0</span></div>
   </div>
-  </div><!-- /sticky wrapper end -->
+  </div>
 
   <div class="table-wrap">
     <table>
@@ -230,7 +224,6 @@ tr:hover td { background: #f8fafc; }
   </div>
 </div>
 
-<!-- CSV Import Modal -->
 <div class="overlay" id="ov-csv" onclick="closeOv('ov-csv',event)">
   <div class="modal" style="max-width:500px;">
     <h3>📥 CSVインポート確認</h3>
@@ -245,7 +238,6 @@ tr:hover td { background: #f8fafc; }
   </div>
 </div>
 
-<!-- Global History Panel -->
 <div id="hist-panel">
   <div class="panel-head">
     <span>全操作履歴</span>
@@ -254,7 +246,6 @@ tr:hover td { background: #f8fafc; }
   <div class="hist-list" id="hist-list"></div>
 </div>
 
-<!-- Add/Edit Modal -->
 <div class="overlay" id="ov-part" onclick="closeOv('ov-part',event)">
   <div class="modal">
     <h3 id="part-title">部品を追加</h3>
@@ -276,7 +267,6 @@ tr:hover td { background: #f8fafc; }
   </div>
 </div>
 
-<!-- Transfer Modal -->
 <div class="overlay" id="ov-transfer" onclick="closeOv('ov-transfer',event)">
   <div class="modal">
     <h3>↔ 部品を移動</h3>
@@ -312,7 +302,6 @@ tr:hover td { background: #f8fafc; }
   </div>
 </div>
 
-<!-- Stock Change Modal -->
 <div class="overlay" id="ov-stock" onclick="closeOv('ov-stock',event)">
   <div class="modal">
     <h3 id="stock-title">在庫を変更</h3>
@@ -338,7 +327,6 @@ tr:hover td { background: #f8fafc; }
   </div>
 </div>
 
-<!-- Part History Modal -->
 <div class="overlay" id="ov-phist" onclick="closeOv('ov-phist',event)">
   <div class="modal" style="max-width:500px;">
     <h3 id="phist-title">📋 変更履歴</h3>
@@ -349,13 +337,11 @@ tr:hover td { background: #f8fafc; }
   </div>
 </div>
 
-<!-- Image Lightbox -->
 <div id="lightbox" onclick="closeLightbox()">
   <span id="lightbox-close">✕</span>
   <img id="lightbox-img" src="" alt="" />
 </div>
 
-<!-- Scan Modal -->
 <div class="overlay" id="ov-scan" onclick="closeOv('ov-scan',event)">
   <div class="modal" style="max-width:500px;">
     <h3>📷 納品書スキャン → シンワ倉庫へ自動入庫</h3>
@@ -379,7 +365,6 @@ tr:hover td { background: #f8fafc; }
   </div>
 </div>
 
-<!-- Photo Modal -->
 <div class="overlay" id="ov-photo" onclick="closeOv('ov-photo',event)">
   <div class="modal" style="max-width:500px;">
     <h3>📸 <span id="photo-title"></span> の写真</h3>
@@ -403,6 +388,39 @@ tr:hover td { background: #f8fafc; }
   </div>
 </div>
 
+<div class="overlay" id="ov-operator" onclick="closeOv('ov-operator',event)">
+  <div class="modal" style="max-width:360px;">
+    <h3>作業者を選択</h3>
+    <p style="font-size:12px;color:var(--muted);margin-top:-12px;margin-bottom:14px;">出庫・移動を記録した人として履歴に残ります。鉛筆アイコンで名前を編集できます。</p>
+    <div id="operator-list" style="display:flex;flex-direction:column;gap:8px;"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeOv('ov-operator')">閉じる</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="ov-qr" onclick="closeOv('ov-qr',event)">
+  <div class="modal" style="max-width:420px;">
+    <h3>📱 QRスキャン（部品番号）</h3>
+    <div id="qr-viewport" style="position:relative;width:100%;aspect-ratio:1/1;background:#0f172a;border-radius:10px;overflow:hidden;display:flex;align-items:center;justify-content:center;margin-bottom:12px;">
+      <video id="qr-video" autoplay playsinline muted style="width:100%;height:100%;object-fit:cover;display:none;"></video>
+      <div id="qr-idle" style="color:#94a3b8;font-size:13px;text-align:center;padding:0 24px;">カメラを起動してQRシールを写してください</div>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:10px;">
+      <button class="btn btn-primary" style="flex:1;" id="qr-cam-btn" onclick="startQRScan()">カメラを起動</button>
+      <button class="btn btn-outline" id="qr-stop-btn" style="display:none;" onclick="stopQRScan()">停止</button>
+    </div>
+    <div class="field"><label>または部品番号を直接入力</label>
+      <input type="text" id="qr-manual" placeholder="例: P-001" onkeydown="if(event.key==='Enter')lookupQR(id('qr-manual').value)" />
+    </div>
+    <button class="btn btn-outline" style="width:100%;margin-top:6px;" onclick="lookupQR(id('qr-manual').value)">この番号で検索</button>
+    <div id="qr-result" style="margin-top:14px;"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="stopQRScan();closeOv('ov-qr')">閉じる</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 
@@ -412,12 +430,38 @@ const TYPE_LABELS = { move:'移動', add:'追加', edit:'編集', del:'削除', 
 let db=null, parts={}, hist=[];
 let curLoc='all', skMode='in', lastOpKey=null;
 let partHistRef=null;
-let openPartKey=null; // 履歴モーダルで表示中の部品キー
+let openPartKey=null;
 let supabaseUrl='', supabaseKey='';
 const PHOTO_BUCKET='parts-photos';
 let photoPartKey=null;
 
-// ── Firebase ──
+let OPERATORS = JSON.parse(localStorage.getItem('operators_v1')||'["シンワ倉庫","アラン","ゆーや","しゅん","たくや"]');
+let currentOperator = localStorage.getItem('current_operator')||null;
+function openOperatorModal(){ renderOperatorList(); open_('ov-operator'); }
+function renderOperatorList(){
+  id('operator-list').innerHTML = OPERATORS.map((name,i)=>`
+    <div style="display:flex;gap:6px;">
+      <button class="btn ${name===currentOperator?'btn-primary':'btn-outline'}" style="flex:1;text-align:left;" onclick="selectOperator('${esc(name)}')">${esc(name)}</button>
+      <button class="btn btn-outline btn-sm" onclick="renameOperator(${i})">✎</button>
+    </div>`).join('');
+}
+function selectOperator(name){
+  currentOperator=name;
+  localStorage.setItem('current_operator',name);
+  id('cur-op-label').textContent=name;
+  closeOv('ov-operator');
+}
+function renameOperator(i){
+  const nn=prompt('名前を編集',OPERATORS[i]);
+  if(nn&&nn.trim()){
+    const old=OPERATORS[i]; OPERATORS[i]=nn.trim();
+    localStorage.setItem('operators_v1',JSON.stringify(OPERATORS));
+    if(currentOperator===old) selectOperator(OPERATORS[i]);
+    renderOperatorList();
+  }
+}
+id('cur-op-label').textContent=currentOperator||'未選択';
+
 function connect() {
   if(typeof firebase==='undefined'){ showErr('Firebase読み込み中です。少し待ってから再度押してください。'); return; }
   const cfg = { apiKey:id('f-key').value.trim(), authDomain:id('f-auth').value.trim(), databaseURL:id('f-db').value.trim(), projectId:id('f-pid').value.trim() };
@@ -464,7 +508,6 @@ function tryAutoConnect(){
     const sbU=localStorage.getItem('sb_url'); if(sbU) id('f-sb-url').value=sbU;
     const sbK=localStorage.getItem('sb_key'); if(sbK) id('f-sb-key').value=sbK;
     if(typeof firebase==='undefined'){
-      // Firebaseがまだ読み込まれていない場合は少し待ってリトライ
       setTimeout(tryAutoConnect, 300);
       return;
     }
@@ -473,22 +516,18 @@ function tryAutoConnect(){
 }
 tryAutoConnect();
 
-// ── Tabs ──
 function setLocTab(el,loc){document.querySelectorAll('.loc-tab').forEach(t=>t.classList.remove('active'));el.classList.add('active');curLoc=loc;id('th-loc').textContent=loc==='all'?'保管場所 / 数量':loc+' の数量';render();}
 function updateTabs(){
   id('cnt-all').textContent=Object.keys(parts).length;
   LOCS.forEach((l,i)=>{ id('cnt-'+i).textContent=Object.values(parts).filter(p=>p.locs&&(p.locs[l]||0)>0).length; });
 }
 
-// ── Render ──
 function render(){
   const q=id('q').value.toLowerCase();
   let rows=Object.entries(parts).map(([k,p])=>({k,...p}));
-  // 検索なし：在庫あり部品のみ表示。検索あり：0でも表示（どこにあるか確認できるように）
   if(curLoc!=='all' && !q) rows=rows.filter(r=>r.locs&&(r.locs[curLoc]||0)>0);
   if(q) rows=rows.filter(r=>(r.name||'').toLowerCase().includes(q)||(r.no||'').toLowerCase().includes(q));
 
-  // 最終操作部品を先頭、残りは更新日時順
   rows.sort((a,b)=>{
     if(a.k===lastOpKey) return -1;
     if(b.k===lastOpKey) return 1;
@@ -524,7 +563,6 @@ function render(){
 }
 
 
-// ── Add/Edit ──
 function openAdd(){
   id('part-title').textContent='部品を追加'; id('p-key').value=''; id('p-no').value=''; id('p-name').value='';
   id('loc-label').textContent='各保管場所の初期数量';
@@ -565,11 +603,9 @@ function delPart(key,name){
   toast('🗑 削除しました');
 }
 
-// ── Stock ──
 function openStock(key){
   const p=parts[key]; if(!p)return;
   id('sk-key').value=key; id('stock-title').textContent=p.name; id('sk-qty').value=1;
-  // 現在のタブの場所をデフォルトに
   if(curLoc!=='all'){ id('sk-loc').value=curLoc; setSkMode('out'); }
   else { id('sk-loc').value='シンワ倉庫'; setSkMode('in'); }
   updateSkPreview(); open_('ov-stock');
@@ -588,6 +624,7 @@ function updateSkPreview(){
   id('sk-preview').textContent=`${loc}: ${cur} → ${after}`;
 }
 function doStockChange(){
+  if(!currentOperator){ toast('先に作業者を選択してください'); openOperatorModal(); return; }
   const key=id('sk-key').value; const p=parts[key]; if(!p)return;
   const loc=id('sk-loc').value, cur=(p.locs||{})[loc]||0, qty=parseInt(id('sk-qty').value)||0;
   const nv=skMode==='in'?cur+qty:skMode==='out'?Math.max(0,cur-qty):qty;
@@ -600,9 +637,7 @@ function doStockChange(){
   closeOv('ov-stock');
 }
 
-// ── Transfer ──
 function fillTrParts(){
-  // datalistを更新
   const dl=id('tr-part-list');
   dl.innerHTML=Object.entries(parts).map(([k,p])=>
     `<option value="${esc(p.no||'')} - ${esc(p.name||'')}" data-key="${k}">`
@@ -613,7 +648,6 @@ function searchTrPart(){
   id('tr-part').value='';
   id('tr-part-name').textContent='';
   if(!q){updateTrPreview();return;}
-  // 部品番号または部品名で一致するものを探す
   const match=Object.entries(parts).find(([k,p])=>
     (p.no||'').toLowerCase()===q ||
     (p.no+' - '+p.name).toLowerCase()===q ||
@@ -626,12 +660,18 @@ function searchTrPart(){
   }
   updateTrPreview();
 }
-function openTransfer(){
-  id('tr-part-input').value='';
-  id('tr-part').value='';
-  id('tr-part-name').textContent='';
+function openTransfer(prefillKey){
+  if(prefillKey && parts[prefillKey]){
+    const p=parts[prefillKey];
+    id('tr-part-input').value=`${p.no||''} - ${p.name}`;
+    id('tr-part').value=prefillKey;
+    id('tr-part-name').textContent=`✅ ${p.no||''} ${p.name}`;
+  } else {
+    id('tr-part-input').value='';
+    id('tr-part').value='';
+    id('tr-part-name').textContent='';
+  }
   id('tr-qty').value=1;
-  // タブに応じてデフォルト設定
   if(curLoc!=='all'){
     id('tr-from').value='シンワ倉庫';
     id('tr-to').value=curLoc;
@@ -649,6 +689,7 @@ function updateTrPreview(){
   id('tr-preview').textContent=`${from}: ${fq}→${Math.max(0,fq-qty)}　${to}: ${tq}→${tq+qty}`;
 }
 function doTransfer(){
+  if(!currentOperator){ toast('先に作業者を選択してください'); openOperatorModal(); return; }
   const key=id('tr-part').value, from=id('tr-from').value, to=id('tr-to').value, qty=parseInt(id('tr-qty').value)||0;
   if(!key||!from||!to){toast('部品・移動元・移動先を選択してください');return;}
   if(from===to){toast('移動元と移動先が同じです');return;}
@@ -664,7 +705,6 @@ function doTransfer(){
   closeOv('ov-transfer');
 }
 
-// ── Part History ──
 function openPartHist(key){
   const p=parts[key]; if(!p)return;
   openPartKey=key;
@@ -684,13 +724,12 @@ function renderPartHistModal(){
         <span class="phi-type type-${h.type||'edit'}">${TYPE_LABELS[h.type]||h.type}</span>
         <span style="color:var(--muted);font-size:12px;">${fmtDate(h.ts)}</span>
       </div>
-      <div class="phi-detail">${esc(h.detail||'')}</div>
+      <div class="phi-detail">${esc(h.detail||'')}${h.operator?` · 👤${esc(h.operator)}`:''}</div>
     </div>`).join('');
 }
 
-// ── Global History ──
 function addHist(type,key,name,detail){
-  db.ref('history').push({type, partKey:key, name, detail, ts:Date.now()});
+  db.ref('history').push({type, partKey:key, name, detail, ts:Date.now(), operator: currentOperator||null});
 }
 function renderHist(){
   const list=id('hist-list');
@@ -699,12 +738,11 @@ function renderHist(){
     const p=h.partKey?parts[h.partKey]:null;
     const no=p?p.no:(h.no||'');
     const nameStr=`${esc(h.name||'')}${no?` <span style="font-size:10px;color:var(--muted);font-family:monospace;">[${esc(no)}]</span>`:''}`;
-    return `<div class="hi hi-${h.type}"><div class="hi-top"><span class="hi-name">${nameStr}</span><span class="hi-time">${fmtDate(h.ts)}</span></div><div class="hi-detail">[${TYPE_LABELS[h.type]||h.type}] ${esc(h.detail||'')}</div></div>`;
+    return `<div class="hi hi-${h.type}"><div class="hi-top"><span class="hi-name">${nameStr}</span><span class="hi-time">${fmtDate(h.ts)}</span></div><div class="hi-detail">[${TYPE_LABELS[h.type]||h.type}] ${esc(h.detail||'')}${h.operator?` · 👤${esc(h.operator)}`:''}</div></div>`;
   }).join('');
 }
 function toggleHist(){ id('hist-panel').classList.toggle('open'); }
 
-// ── CSV Import ──
 let csvImportData = null;
 
 function handleCSVImport(e){
@@ -715,7 +753,6 @@ function handleCSVImport(e){
   reader.onload = function(ev){
     try {
       let text = ev.target.result;
-      // BOM除去
       if(text.charCodeAt(0)===0xFEFF) text=text.slice(1);
       csvImportData = parseImportCSV(text);
       if(!csvImportData || Object.keys(csvImportData).length===0){
@@ -745,7 +782,6 @@ function parseImportCSV(text){
   const lines = text.split(/\r?\n/).filter(l=>l.trim());
   if(lines.length < 2) return null;
 
-  // ヘッダー（カンマで単純分割）
   const headers = lines[0].split(',').map(h=>h.trim().replace(/^"|"$/g,''));
   const nameIdx = headers.findIndex(h=>h.includes('物品名'));
   const locIdx  = headers.findIndex(h=>h.includes('保管場所'));
@@ -781,7 +817,6 @@ async function doCSVImport(){
   const entries = Object.values(csvImportData);
   let done=0;
 
-  // 既存部品を部品番号/名前でマップ
   const existingMap={};
   Object.entries(parts).forEach(([k,p])=>{
     if(p.no) existingMap[p.no]=k;
@@ -807,7 +842,6 @@ async function doCSVImport(){
   csvImportData=null;
 }
 
-// ── Export ──
 function getExportRows(){
   return Object.values(parts).map(p=>{
     const locs=p.locs||{}, total=LOCS.reduce((s,l)=>s+(locs[l]||0),0);
@@ -836,7 +870,6 @@ function exportExcel(){
   toast('📊 Excelをダウンロードしました');
 }
 
-// ── Scan (納品書スキャン) ──
 let scanImageBase64 = null, scanImageMime = null, scanParsedItems = [];
 
 function openScan(){
@@ -912,7 +945,6 @@ function renderScanResults(){
     id('scan-results').innerHTML='<div style="text-align:center;padding:16px;color:var(--muted);">部品が検出されませんでした</div>';
     return;
   }
-  // 部品番号でマッチング
   const partsByNo={};
   Object.entries(parts).forEach(([k,p])=>{ if(p.no) partsByNo[String(p.no).trim()]=k; });
 
@@ -961,7 +993,6 @@ async function doScanImport(){
   closeOv('ov-scan');
 }
 
-// ── Photo Management ──
 function openPhotoModal(key){
   const p=parts[key]; if(!p) return;
   photoPartKey=key;
@@ -1048,7 +1079,69 @@ async function deletePhoto(key,idx){
 function showLightbox(url){ id('lightbox-img').src=url; id('lightbox').classList.add('open'); }
 function closeLightbox(){ id('lightbox').classList.remove('open'); id('lightbox-img').src=''; }
 
-// ── Helpers ──
+let qrStream=null, qrScanning=false;
+const qrCanvas=document.createElement('canvas');
+const qrCtx=qrCanvas.getContext('2d',{willReadFrequently:true});
+
+function openQR(){
+  id('qr-result').innerHTML='';
+  id('qr-manual').value='';
+  open_('ov-qr');
+}
+async function startQRScan(){
+  try{
+    qrStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});
+    const v=id('qr-video'); v.srcObject=qrStream; v.style.display='block';
+    id('qr-idle').style.display='none';
+    id('qr-cam-btn').style.display='none';
+    id('qr-stop-btn').style.display='inline-block';
+    qrScanning=true;
+    requestAnimationFrame(qrTick);
+  }catch(e){
+    toast('カメラを利用できません。番号を直接入力してください');
+  }
+}
+function stopQRScan(){
+  qrScanning=false;
+  if(qrStream) qrStream.getTracks().forEach(t=>t.stop());
+  const v=id('qr-video'); v.style.display='none';
+  id('qr-idle').style.display='block';
+  id('qr-cam-btn').style.display='inline-block';
+  id('qr-stop-btn').style.display='none';
+}
+function qrTick(){
+  if(!qrScanning) return;
+  const v=id('qr-video');
+  if(v.readyState===v.HAVE_ENOUGH_DATA){
+    qrCanvas.width=v.videoWidth; qrCanvas.height=v.videoHeight;
+    qrCtx.drawImage(v,0,0,qrCanvas.width,qrCanvas.height);
+    const img=qrCtx.getImageData(0,0,qrCanvas.width,qrCanvas.height);
+    const code=window.jsQR?jsQR(img.data,img.width,img.height):null;
+    if(code&&code.data){ stopQRScan(); lookupQR(code.data); }
+  }
+  requestAnimationFrame(qrTick);
+}
+function lookupQR(value){
+  const v=(value||'').trim(); if(!v) return;
+  const match=Object.entries(parts).find(([k,p])=>String(p.no||'').trim()===v);
+  if(!match){
+    id('qr-result').innerHTML=`<div style="padding:12px;background:#fef2f2;border-radius:8px;color:var(--danger);font-size:13px;">「${esc(v)}」に一致する部品が見つかりません</div>`;
+    return;
+  }
+  const [key,p]=match;
+  const locs=p.locs||{};
+  id('qr-result').innerHTML=`
+    <div style="border:1px solid var(--border);border-radius:10px;padding:14px;">
+      <div style="font-weight:700;margin-bottom:2px;">${esc(p.name)}</div>
+      <div style="font-family:monospace;font-size:12px;color:var(--muted);margin-bottom:10px;">${esc(p.no||'')}</div>
+      <div class="loc-chips" style="margin-bottom:12px;">${LOCS.map(l=>`<span class="loc-chip ${(locs[l]||0)>0?'has':''}">${l}: ${locs[l]||0}</span>`).join('')}</div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-success" style="flex:1;" onclick="closeOv('ov-qr');openStock('${key}')">在庫を変更</button>
+        <button class="btn btn-warning" style="flex:1;" onclick="closeOv('ov-qr');openTransfer('${key}')">移動する</button>
+      </div>
+    </div>`;
+}
+
 function id(x){return document.getElementById(x);}
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function fmtDate(ts){if(!ts)return'—';const d=new Date(ts);return d.toLocaleString('ja-JP',{timeZone:'Asia/Tokyo',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});}
