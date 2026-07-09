@@ -1151,21 +1151,24 @@ async function startQRScan(){
     id('qr-cam-btn').style.display='none';
     id('qr-stop-btn').style.display='inline-block';
     qrScanning=true;
-    // iOS Safariはplay()を明示的に呼ばないと再生されない
+    // 診断: BarcodeDetector使用可否をトーストで通知
+    toast(barcodeDetector ? '📷 スキャン開始（バーコード対応）' : '📷 スキャン開始（QRコードのみ）');
     try{ await v.play(); }catch(_){}
-    setTimeout(qrTick, 300); // 少し待ってから開始（映像が安定するまで）
+    setTimeout(qrTick, 500);
   }catch(e){
-    toast('カメラを利用できません: ' + (e.message||e));
+    toast('カメラエラー: ' + (e.message||e));
   }
 }
 function stopQRScan(){
-  qrScanning=false;
+  qrScanning=false; qrTickCount=0;
   if(qrStream){ qrStream.getTracks().forEach(t=>t.stop()); qrStream=null; }
   const v=id('qr-video'); v.srcObject=null; v.style.display='none';
+  id('qr-idle').textContent='カメラを起動してバーコードまたはQRコードを写してください';
   id('qr-idle').style.display='block';
   id('qr-cam-btn').style.display='inline-block';
   id('qr-stop-btn').style.display='none';
 }
+let qrTickCount=0;
 async function qrTick(){
   if(!qrScanning) return;
   const v=id('qr-video');
@@ -1178,13 +1181,21 @@ async function qrTick(){
         if(codes.length>0) decoded=codes[0].rawValue;
       }catch(_){}
     }
-    // 2) フォールバック: jsQR（QRコードのみ）
+    // 2) フォールバック: jsQR（QRコードのみ）- 写真と同じ多段スケール処理
     if(!decoded && window.jsQR){
       qrCanvas.width=v.videoWidth; qrCanvas.height=v.videoHeight;
       qrCtx.drawImage(v,0,0,qrCanvas.width,qrCanvas.height);
-      const img=qrCtx.getImageData(0,0,qrCanvas.width,qrCanvas.height);
-      const code=jsQR(img.data,img.width,img.height);
-      if(code) decoded=code.data;
+      // まず全体、次に中心クロップで試す
+      const imgFull=qrCtx.getImageData(0,0,qrCanvas.width,qrCanvas.height);
+      const c1=jsQR(imgFull.data,imgFull.width,imgFull.height);
+      if(c1) decoded=c1.data;
+      if(!decoded){
+        const cx=Math.floor(qrCanvas.width/2), cy=Math.floor(qrCanvas.height/2);
+        const half=Math.floor(Math.min(qrCanvas.width,qrCanvas.height)*0.4);
+        const imgCrop=qrCtx.getImageData(cx-half,cy-half,half*2,half*2);
+        const c2=jsQR(imgCrop.data,imgCrop.width,imgCrop.height);
+        if(c2) decoded=c2.data;
+      }
     }
     if(decoded){
       stopQRScan();
@@ -1192,8 +1203,14 @@ async function qrTick(){
       id('qr-result').innerHTML=`<div style="padding:6px 10px;background:#f0fdf4;border-radius:6px;font-size:12px;color:#166534;margin-bottom:6px;">✅ 読み取り: ${esc(decoded)}</div>`;
       lookupQR(decoded); return;
     }
+    // 10フレームごとにスキャン中を表示（ループ生存確認）
+    qrTickCount++;
+    if(qrTickCount%10===0){
+      id('qr-idle').textContent='スキャン中... ('+qrTickCount+'フレーム処理済)';
+      id('qr-idle').style.display='block';
+    }
   }
-  if(qrScanning) setTimeout(qrTick, 150);
+  if(qrScanning) setTimeout(qrTick, 200);
 }
 function lookupQR(value){
   const v=(value||'').trim();
