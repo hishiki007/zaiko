@@ -1116,30 +1116,37 @@ function onQRPhotoSelect(e){
 
 function findQRInImage(img){
   const iw=img.naturalWidth, ih=img.naturalHeight;
-  // 1) まず画像全体で試す
-  let code=decodeQRFromCrop(img,0,0,iw,ih);
-  if(code) return code;
-  // 2) 中心を基準に、だんだん狭い範囲を切り出して拡大しながら試す（QRが小さく写っている場合の対策）
-  const ratios=[0.7,0.5,0.35,0.25,0.18];
-  const cx=iw/2, cy=ih/2;
+  // iPhoneの高解像度写真（12MP）はiOS SafariのCanvasメモリ制限に引っかかるため
+  // まず最大1200pxにダウンスケールしてから処理する
+  const MAX=1200;
+  const s=Math.min(1, MAX/Math.max(iw,ih));
+  const bw=Math.round(iw*s), bh=Math.round(ih*s);
+  const base=document.createElement('canvas');
+  base.width=bw; base.height=bh;
+  const bCtx=base.getContext('2d',{willReadFrequently:true});
+  bCtx.drawImage(img,0,0,bw,bh);
+
+  // 1) ダウンスケール済み全体で試す
+  let d=bCtx.getImageData(0,0,bw,bh);
+  let result=window.jsQR?jsQR(d.data,bw,bh):null;
+  if(result) return result.data;
+
+  // 2) 中心クロップを拡大しながら試す
+  const ratios=[0.75,0.55,0.4,0.28];
+  const cx=bw/2, cy=bh/2;
   for(const r of ratios){
-    const cw=iw*r, ch=ih*r;
-    code=decodeQRFromCrop(img,cx-cw/2,cy-ch/2,cw,ch);
-    if(code) return code;
+    const cw=Math.round(bw*r), ch=Math.round(bh*r);
+    const sc=Math.max(1, 900/Math.min(cw,ch));
+    const ow=Math.round(cw*sc), oh=Math.round(ch*sc);
+    const c2=document.createElement('canvas');
+    c2.width=ow; c2.height=oh;
+    const c2Ctx=c2.getContext('2d',{willReadFrequently:true});
+    c2Ctx.drawImage(base,cx-cw/2,cy-ch/2,cw,ch,0,0,ow,oh);
+    d=c2Ctx.getImageData(0,0,ow,oh);
+    result=window.jsQR?jsQR(d.data,ow,oh):null;
+    if(result) return result.data;
   }
   return null;
-}
-function decodeQRFromCrop(img,sx,sy,sw,sh){
-  const target=900;
-  const scale=Math.max(1,target/Math.min(sw,sh));
-  const outW=Math.round(sw*scale), outH=Math.round(sh*scale);
-  const c=document.createElement('canvas');
-  c.width=outW; c.height=outH;
-  const cx=c.getContext('2d',{willReadFrequently:true});
-  cx.drawImage(img,sx,sy,sw,sh,0,0,outW,outH);
-  const data=cx.getImageData(0,0,outW,outH);
-  const result=window.jsQR?jsQR(data.data,data.width,data.height):null;
-  return result?result.data:null;
 }
 async function startQRScan(){
   try{
