@@ -1132,16 +1132,25 @@ function stopQRScan(){
 function onQRPhotoSelect(e){
   var file=e.target.files[0]; if(!file) return;
   e.target.value='';
+
+  // ライブラリロード確認
+  if(typeof Html5Qrcode==='undefined'){
+    toast('❌ ライブラリ未ロード（ネット接続確認）');
+    id('qr-result').innerHTML='<div style="padding:12px;background:#fef2f2;border-radius:8px;color:var(--danger);font-size:13px;">ライブラリが読み込まれていません。ページをリロードしてください。</div>';
+    return;
+  }
+
   toast('📷 解析中...');
   id('qr-result').innerHTML='<div style="padding:8px 12px;background:#f8fafc;border-radius:6px;font-size:13px;color:var(--muted);">📷 解析中...</div>';
 
-  // スキャン用の非表示DIV
+  // スキャン用の非表示DIV（十分なサイズを確保）
   var scanDivId='qr-scan-file-div';
-  if(!document.getElementById(scanDivId)){
-    var d=document.createElement('div');
-    d.id=scanDivId;
-    d.style.cssText='position:fixed;left:-9999px;top:-9999px;width:1px;height:1px;';
-    document.body.appendChild(d);
+  var scanDiv=document.getElementById(scanDivId);
+  if(!scanDiv){
+    scanDiv=document.createElement('div');
+    scanDiv.id=scanDivId;
+    scanDiv.style.cssText='position:fixed;left:-9999px;top:-9999px;width:300px;height:300px;';
+    document.body.appendChild(scanDiv);
   }
 
   var scanner=new Html5Qrcode(scanDivId);
@@ -1151,9 +1160,10 @@ function onQRPhotoSelect(e){
       id('qr-manual').value=text;
       lookupQR(text);
     })
-    .catch(function(){
-      toast('❌ 読み取れませんでした');
-      id('qr-result').innerHTML='<div style="padding:12px;background:#fef2f2;border-radius:8px;color:var(--danger);font-size:13px;">読み取れませんでした。QRコードを画面いっぱいに写して再度お試しください。</div>';
+    .catch(function(err){
+      var msg=err&&(err.message||String(err))||'';
+      toast('❌ '+(msg.length>30?msg.substring(0,30)+'…':msg||'読み取れません'));
+      id('qr-result').innerHTML='<div style="padding:12px;background:#fef2f2;border-radius:8px;color:var(--danger);font-size:13px;">読み取れませんでした。<br><small style="word-break:break-all;">'+esc(msg)+'</small></div>';
     });
 }
 function lookupQR(value){
