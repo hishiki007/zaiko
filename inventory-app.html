@@ -412,8 +412,10 @@ tr:hover td { background: #f8fafc; }
       <button class="btn btn-primary" style="flex:1;" id="qr-cam-btn" onclick="startQRScan()">カメラを起動</button>
       <button class="btn btn-outline" id="qr-stop-btn" style="display:none;" onclick="stopQRScan()">停止</button>
     </div>
-    <button class="btn btn-success" style="display:block;width:100%;margin-bottom:10px;" onclick="id('qr-photo-input').click()">📷 写真で読み取る</button>
-    <input type="file" id="qr-photo-input" accept="image/*" capture="environment" style="position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;" onchange="onQRPhotoSelect(event)" />
+    <div style="position:relative;width:100%;height:42px;margin-bottom:10px;border-radius:8px;overflow:hidden;">
+      <div style="position:absolute;inset:0;background:var(--success);color:white;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;pointer-events:none;">📷 写真で読み取る</div>
+      <input type="file" id="qr-photo-input" accept="image/*" capture="environment" style="position:absolute;inset:0;width:100%;height:100%;opacity:0.01;cursor:pointer;font-size:100px;" onchange="onQRPhotoSelect(event)" />
+    </div>
     <div class="field"><label>部品番号・部品名を直接入力</label>
       <input type="text" id="qr-manual" placeholder="例: 27313 またはフィルター" onkeydown="if(event.key==='Enter'){lookupQR(this.value);}" style="font-size:16px;" />
     </div>
