@@ -1102,7 +1102,7 @@ function startQRScan(){
   qrH5=new Html5Qrcode('qr-scanner-box');
   qrH5.start(
     {facingMode:'environment'},
-    {fps:10, qrbox:{width:220,height:220}},
+    {fps:10},
     function(decodedText){
       stopQRScan();
       id('qr-manual').value=decodedText;
