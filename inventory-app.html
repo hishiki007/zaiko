@@ -3,15 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>メリタ部品在庫管理</title>
-<link rel="apple-touch-icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAYAAAA9zQYyAAAevUlEQVR4nO2dd3gU1frHvzM723eT3SSEkNBCEZQiiKCgKAgqRRQEFEEJV0SKyvVeitgRsF29F853L38Y" />
-<meta name="apple-mobile-web-app-capable" content="yes" />
-<meta name="apple-mobile-web-app-title" content="メリタ在庫" />
+<title>部品在庫管理</title>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jsqr/1.4.0/jsQR.js"></script>
 <style>
 :root {
   --primary: #2563eb; --primary-dark: #1d4ed8;
@@ -77,6 +73,7 @@ tr:hover td { background: #f8fafc; }
 .loc-chip { font-size: 11px; padding: 2px 7px; border-radius: 999px; border: 1px solid var(--border); background: var(--bg); white-space: nowrap; }
 .loc-chip.has { background: #dcfce7; border-color: #86efac; color: var(--success); font-weight: 600; }
 
+/* Part photo thumbnail */
 .part-thumb { width: 40px; height: 40px; border-radius: 6px; object-fit: cover; border: 1px solid var(--border); cursor: pointer; }
 .part-thumb-none { width: 40px; height: 40px; border-radius: 6px; border: 1px dashed var(--border); display: flex; align-items: center; justify-content: center; font-size: 18px; color: var(--border); }
 
@@ -91,14 +88,17 @@ tr:hover td { background: #f8fafc; }
 .modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
 .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 
+/* Photo upload area */
 .photo-area { border: 2px dashed var(--border); border-radius: 10px; padding: 16px; text-align: center; cursor: pointer; transition: border-color 0.2s; margin-bottom: 4px; }
 .photo-area:hover { border-color: var(--primary); }
 .photo-area img { max-width: 100%; max-height: 160px; border-radius: 8px; object-fit: contain; }
 .photo-area .ph-hint { color: var(--muted); font-size: 13px; margin-top: 8px; }
 .photo-area .ph-icon { font-size: 32px; }
 
+/* Transfer */
 .transfer-preview { background: var(--bg); border-radius: 8px; padding: 12px; font-size: 13px; color: var(--muted); text-align: center; margin-top: 8px; }
 
+/* History panel (global) */
 #hist-panel { position: fixed; right: 0; top: 56px; bottom: 0; width: 320px; background: var(--card); border-left: 1px solid var(--border); transform: translateX(100%); transition: transform 0.3s; z-index: 150; display: flex; flex-direction: column; }
 #hist-panel.open { transform: translateX(0); }
 .panel-head { padding: 14px 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; font-weight: 700; font-size: 14px; }
@@ -116,6 +116,7 @@ tr:hover td { background: #f8fafc; }
 .hi-in { border-left: 3px solid var(--success); }
 .hi-out { border-left: 3px solid var(--danger); }
 
+/* Part history modal */
 .part-hist-item { padding: 10px 12px; border-radius: 8px; margin-bottom: 6px; border: 1px solid var(--border); font-size: 13px; }
 .part-hist-item .phi-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px; }
 .part-hist-item .phi-type { font-weight: 700; font-size: 12px; padding: 2px 8px; border-radius: 999px; }
@@ -128,6 +129,7 @@ tr:hover td { background: #f8fafc; }
 .type-set { background: #ede9fe; color: #7c3aed; }
 .phi-detail { color: var(--muted); font-size: 12px; }
 
+/* Image lightbox */
 #lightbox { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: flex; align-items: center; justify-content: center; z-index: 500; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
 #lightbox.open { opacity: 1; pointer-events: all; }
 #lightbox img { max-width: 90vw; max-height: 85vh; border-radius: 10px; object-fit: contain; }
@@ -142,6 +144,7 @@ tr:hover td { background: #f8fafc; }
   #hist-panel { width: 100%; }
 }
 
+/* Scan modal */
 .scan-drop { border: 2px dashed var(--border); border-radius: 10px; padding: 24px 16px; text-align: center; cursor: pointer; transition: border-color 0.2s; background: var(--bg); }
 .scan-drop:hover { border-color: var(--primary); }
 .scan-drop img { max-width: 100%; max-height: 220px; border-radius: 8px; object-fit: contain; margin-top: 8px; }
@@ -162,12 +165,12 @@ tr:hover td { background: #f8fafc; }
   <h1>🔧 部品在庫管理</h1>
   <div class="header-right">
     <span class="dot" id="dot"></span>
-    <button class="btn btn-ghost btn-sm" onclick="openOperatorModal()">👤 <span id="cur-op-label">未選択</span></button>
     <button class="btn btn-ghost btn-sm" onclick="toggleHist()">全履歴</button>
     <button class="btn btn-ghost btn-sm" onclick="doLogout()">設定</button>
   </div>
 </header>
 
+<!-- Setup -->
 <div id="setup">
   <div class="card">
     <h2>🔥 Firebase 設定</h2>
@@ -177,13 +180,12 @@ tr:hover td { background: #f8fafc; }
     <div class="field"><label>Database URL</label><input id="f-db" placeholder="https://xxx.firebasedatabase.app" /></div>
     <div class="field"><label>Project ID</label><input id="f-pid" placeholder="your-project-id" /></div>
     <div class="field"><label>Anthropic API Key（納品書スキャン用・任意）</label><input id="f-anthropic" placeholder="sk-ant-api03-..." type="password" /></div>
-    <div class="field"><label>Supabase URL（写真保存用・任意）</label><input id="f-sb-url" placeholder="https://xxxx.supabase.co" /></div>
-    <div class="field"><label>Supabase Anon Key（写真保存用・任意）</label><input id="f-sb-key" placeholder="eyJ..." type="password" /></div>
     <button class="btn btn-primary" style="width:100%;padding:11px;margin-top:4px;" onclick="connect()">接続して開始 →</button>
     <p class="err" id="setup-err"></p>
   </div>
 </div>
 
+<!-- App -->
 <div id="app">
   <div style="position:-webkit-sticky;position:sticky;top:56px;z-index:99;background:var(--card);box-shadow:0 2px 6px rgba(0,0,0,0.08);">
   <div class="toolbar">
@@ -195,7 +197,6 @@ tr:hover td { background: #f8fafc; }
     <label class="btn btn-outline" for="csv-import-input" style="cursor:pointer;">📥 CSVインポート</label>
     <input type="file" id="csv-import-input" accept=".csv" style="display:none" onchange="handleCSVImport(event)" />
     <button class="btn btn-success" onclick="openScan()" id="scan-btn" style="display:none;">📷 納品書スキャン</button>
-    <button class="btn btn-success" onclick="openQR()">📱 QRスキャン</button>
   </div>
 
   <div class="loc-tabs">
@@ -206,7 +207,7 @@ tr:hover td { background: #f8fafc; }
     <div class="loc-tab" data-loc="しゅん" onclick="setLocTab(this,'しゅん')">しゅん<span class="cnt" id="cnt-3">0</span></div>
     <div class="loc-tab" data-loc="たくや" onclick="setLocTab(this,'たくや')">たくや<span class="cnt" id="cnt-4">0</span></div>
   </div>
-  </div>
+  </div><!-- /sticky wrapper end -->
 
   <div class="table-wrap">
     <table>
@@ -224,6 +225,7 @@ tr:hover td { background: #f8fafc; }
   </div>
 </div>
 
+<!-- CSV Import Modal -->
 <div class="overlay" id="ov-csv" onclick="closeOv('ov-csv',event)">
   <div class="modal" style="max-width:500px;">
     <h3>📥 CSVインポート確認</h3>
@@ -238,6 +240,7 @@ tr:hover td { background: #f8fafc; }
   </div>
 </div>
 
+<!-- Global History Panel -->
 <div id="hist-panel">
   <div class="panel-head">
     <span>全操作履歴</span>
@@ -246,6 +249,7 @@ tr:hover td { background: #f8fafc; }
   <div class="hist-list" id="hist-list"></div>
 </div>
 
+<!-- Add/Edit Modal -->
 <div class="overlay" id="ov-part" onclick="closeOv('ov-part',event)">
   <div class="modal">
     <h3 id="part-title">部品を追加</h3>
@@ -267,6 +271,7 @@ tr:hover td { background: #f8fafc; }
   </div>
 </div>
 
+<!-- Transfer Modal -->
 <div class="overlay" id="ov-transfer" onclick="closeOv('ov-transfer',event)">
   <div class="modal">
     <h3>↔ 部品を移動</h3>
@@ -302,6 +307,7 @@ tr:hover td { background: #f8fafc; }
   </div>
 </div>
 
+<!-- Stock Change Modal -->
 <div class="overlay" id="ov-stock" onclick="closeOv('ov-stock',event)">
   <div class="modal">
     <h3 id="stock-title">在庫を変更</h3>
@@ -327,6 +333,7 @@ tr:hover td { background: #f8fafc; }
   </div>
 </div>
 
+<!-- Part History Modal -->
 <div class="overlay" id="ov-phist" onclick="closeOv('ov-phist',event)">
   <div class="modal" style="max-width:500px;">
     <h3 id="phist-title">📋 変更履歴</h3>
@@ -337,11 +344,13 @@ tr:hover td { background: #f8fafc; }
   </div>
 </div>
 
+<!-- Image Lightbox -->
 <div id="lightbox" onclick="closeLightbox()">
   <span id="lightbox-close">✕</span>
   <img id="lightbox-img" src="" alt="" />
 </div>
 
+<!-- Scan Modal -->
 <div class="overlay" id="ov-scan" onclick="closeOv('ov-scan',event)">
   <div class="modal" style="max-width:500px;">
     <h3>📷 納品書スキャン → シンワ倉庫へ自動入庫</h3>
@@ -365,62 +374,6 @@ tr:hover td { background: #f8fafc; }
   </div>
 </div>
 
-<div class="overlay" id="ov-photo" onclick="closeOv('ov-photo',event)">
-  <div class="modal" style="max-width:500px;">
-    <h3>📸 <span id="photo-title"></span> の写真</h3>
-    <div id="photo-grid" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;min-height:50px;"></div>
-    <div id="photo-upload-area">
-      <div style="display:flex;gap:8px;">
-        <label class="btn btn-primary" style="flex:1;text-align:center;cursor:pointer;" for="photo-camera">
-          📷 カメラで撮影
-        </label>
-        <label class="btn btn-outline" style="flex:1;text-align:center;cursor:pointer;" for="photo-gallery">
-          🖼 アルバムから選択
-        </label>
-      </div>
-      <input type="file" id="photo-camera" accept="image/*" capture="environment" style="display:none" onchange="handlePhotoFile(event)" />
-      <input type="file" id="photo-gallery" accept="image/*" style="display:none" onchange="handlePhotoFile(event)" />
-      <div id="photo-status" style="margin-top:10px;font-size:13px;color:var(--muted);text-align:center;min-height:20px;"></div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-outline" onclick="closeOv('ov-photo')">閉じる</button>
-    </div>
-  </div>
-</div>
-
-<div class="overlay" id="ov-operator" onclick="closeOv('ov-operator',event)">
-  <div class="modal" style="max-width:360px;">
-    <h3>作業者を選択</h3>
-    <p style="font-size:12px;color:var(--muted);margin-top:-12px;margin-bottom:14px;">出庫・移動を記録した人として履歴に残ります。鉛筆アイコンで名前を編集できます。</p>
-    <div id="operator-list" style="display:flex;flex-direction:column;gap:8px;"></div>
-    <div class="modal-footer">
-      <button class="btn btn-outline" onclick="closeOv('ov-operator')">閉じる</button>
-    </div>
-  </div>
-</div>
-
-<div class="overlay" id="ov-qr" onclick="closeOv('ov-qr',event)">
-  <div class="modal" style="max-width:420px;">
-    <h3>📱 QRスキャン（部品番号）</h3>
-    <div id="qr-viewport" style="position:relative;width:100%;aspect-ratio:1/1;background:#0f172a;border-radius:10px;overflow:hidden;display:flex;align-items:center;justify-content:center;margin-bottom:12px;">
-      <video id="qr-video" autoplay playsinline muted style="width:100%;height:100%;object-fit:cover;display:none;"></video>
-      <div id="qr-idle" style="color:#94a3b8;font-size:13px;text-align:center;padding:0 24px;">カメラを起動してQRシールを写してください</div>
-    </div>
-    <div style="display:flex;gap:8px;margin-bottom:10px;">
-      <button class="btn btn-primary" style="flex:1;" id="qr-cam-btn" onclick="startQRScan()">カメラを起動</button>
-      <button class="btn btn-outline" id="qr-stop-btn" style="display:none;" onclick="stopQRScan()">停止</button>
-    </div>
-    <div class="field"><label>または部品番号を直接入力</label>
-      <input type="text" id="qr-manual" placeholder="例: P-001" onkeydown="if(event.key==='Enter')lookupQR(id('qr-manual').value)" />
-    </div>
-    <button class="btn btn-outline" style="width:100%;margin-top:6px;" onclick="lookupQR(id('qr-manual').value)">この番号で検索</button>
-    <div id="qr-result" style="margin-top:14px;"></div>
-    <div class="modal-footer">
-      <button class="btn btn-outline" onclick="stopQRScan();closeOv('ov-qr')">閉じる</button>
-    </div>
-  </div>
-</div>
-
 <div id="toast"></div>
 
 
@@ -430,47 +383,15 @@ const TYPE_LABELS = { move:'移動', add:'追加', edit:'編集', del:'削除', 
 let db=null, parts={}, hist=[];
 let curLoc='all', skMode='in', lastOpKey=null;
 let partHistRef=null;
-let openPartKey=null;
-let supabaseUrl='', supabaseKey='';
-const PHOTO_BUCKET='parts-photos';
-let photoPartKey=null;
+let openPartKey=null; // 履歴モーダルで表示中の部品キー
 
-let OPERATORS = JSON.parse(localStorage.getItem('operators_v1')||'["シンワ倉庫","アラン","ゆーや","しゅん","たくや"]');
-let currentOperator = localStorage.getItem('current_operator')||null;
-function openOperatorModal(){ renderOperatorList(); open_('ov-operator'); }
-function renderOperatorList(){
-  id('operator-list').innerHTML = OPERATORS.map((name,i)=>`
-    <div style="display:flex;gap:6px;">
-      <button class="btn ${name===currentOperator?'btn-primary':'btn-outline'}" style="flex:1;text-align:left;" onclick="selectOperator('${esc(name)}')">${esc(name)}</button>
-      <button class="btn btn-outline btn-sm" onclick="renameOperator(${i})">✎</button>
-    </div>`).join('');
-}
-function selectOperator(name){
-  currentOperator=name;
-  localStorage.setItem('current_operator',name);
-  id('cur-op-label').textContent=name;
-  closeOv('ov-operator');
-}
-function renameOperator(i){
-  const nn=prompt('名前を編集',OPERATORS[i]);
-  if(nn&&nn.trim()){
-    const old=OPERATORS[i]; OPERATORS[i]=nn.trim();
-    localStorage.setItem('operators_v1',JSON.stringify(OPERATORS));
-    if(currentOperator===old) selectOperator(OPERATORS[i]);
-    renderOperatorList();
-  }
-}
-id('cur-op-label').textContent=currentOperator||'未選択';
-
+// ── Firebase ──
 function connect() {
   if(typeof firebase==='undefined'){ showErr('Firebase読み込み中です。少し待ってから再度押してください。'); return; }
   const cfg = { apiKey:id('f-key').value.trim(), authDomain:id('f-auth').value.trim(), databaseURL:id('f-db').value.trim(), projectId:id('f-pid').value.trim() };
   if (!cfg.apiKey||!cfg.databaseURL||!cfg.projectId) { showErr('API Key、Database URL、Project ID は必須です'); return; }
   const anthropicKey=id('f-anthropic').value.trim();
   if(anthropicKey) localStorage.setItem('anthropic_key', anthropicKey);
-  const sbUrl=id('f-sb-url').value.trim(), sbKey=id('f-sb-key').value.trim();
-  if(sbUrl) localStorage.setItem('sb_url', sbUrl);
-  if(sbKey) localStorage.setItem('sb_key', sbKey);
   localStorage.setItem('inv_cfg', JSON.stringify(cfg));
   initFB(cfg);
 }
@@ -489,8 +410,6 @@ function initFB(cfg) {
       id('setup').style.display='none';
       id('app').style.display='block';
       if(localStorage.getItem('anthropic_key')) id('scan-btn').style.display='inline-block';
-      const sbUrl2=localStorage.getItem('sb_url'), sbKey2=localStorage.getItem('sb_key');
-      if(sbUrl2 && sbKey2){ supabaseUrl=sbUrl2.replace(/\/$/,''); supabaseKey=sbKey2; }
     }).catch(e => { showErr('認証エラー: '+e.message); });
   } catch(e) { showErr('接続エラー: '+e.message); }
 }
@@ -505,9 +424,8 @@ function tryAutoConnect(){
     id('f-db').value=c.databaseURL||'';
     id('f-pid').value=c.projectId||'';
     const ak=localStorage.getItem('anthropic_key'); if(ak) id('f-anthropic').value=ak;
-    const sbU=localStorage.getItem('sb_url'); if(sbU) id('f-sb-url').value=sbU;
-    const sbK=localStorage.getItem('sb_key'); if(sbK) id('f-sb-key').value=sbK;
     if(typeof firebase==='undefined'){
+      // Firebaseがまだ読み込まれていない場合は少し待ってリトライ
       setTimeout(tryAutoConnect, 300);
       return;
     }
@@ -516,18 +434,22 @@ function tryAutoConnect(){
 }
 tryAutoConnect();
 
+// ── Tabs ──
 function setLocTab(el,loc){document.querySelectorAll('.loc-tab').forEach(t=>t.classList.remove('active'));el.classList.add('active');curLoc=loc;id('th-loc').textContent=loc==='all'?'保管場所 / 数量':loc+' の数量';render();}
 function updateTabs(){
   id('cnt-all').textContent=Object.keys(parts).length;
   LOCS.forEach((l,i)=>{ id('cnt-'+i).textContent=Object.values(parts).filter(p=>p.locs&&(p.locs[l]||0)>0).length; });
 }
 
+// ── Render ──
 function render(){
   const q=id('q').value.toLowerCase();
   let rows=Object.entries(parts).map(([k,p])=>({k,...p}));
+  // 検索なし：在庫あり部品のみ表示。検索あり：0でも表示（どこにあるか確認できるように）
   if(curLoc!=='all' && !q) rows=rows.filter(r=>r.locs&&(r.locs[curLoc]||0)>0);
   if(q) rows=rows.filter(r=>(r.name||'').toLowerCase().includes(q)||(r.no||'').toLowerCase().includes(q));
 
+  // 最終操作部品を先頭、残りは更新日時順
   rows.sort((a,b)=>{
     if(a.k===lastOpKey) return -1;
     if(b.k===lastOpKey) return 1;
@@ -543,13 +465,10 @@ function render(){
       ?`<div class="loc-chips">${LOCS.map(l=>`<span class="loc-chip ${(locs[l]||0)>0?'has':''}">${l}: ${locs[l]||0}</span>`).join('')}</div>`
       :`<span class="qty-cell ${(locs[curLoc]||0)===0?'zero':''}">${locs[curLoc]||0}</span>`;
     const isLast = r.k===lastOpKey;
-    const photos = r.photos||[];
-    const thumb = photos.length>0
-      ? `<img src="${photos[0]}" onclick="openPhotoModal('${r.k}')" style="width:36px;height:36px;object-fit:cover;border-radius:5px;border:1px solid var(--border);margin-right:6px;vertical-align:middle;cursor:pointer;flex-shrink:0;" />`
-      : (supabaseUrl ? `<span onclick="openPhotoModal('${r.k}')" style="display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:5px;border:1px dashed var(--border);background:var(--bg);font-size:16px;margin-right:6px;cursor:pointer;vertical-align:middle;flex-shrink:0;">📷</span>` : '');
     return `<tr id="row-${r.k}" style="${isLast?'background:#eff6ff;border-left:3px solid var(--primary);':''}">
       <td style="font-family:monospace;font-size:12px;color:var(--muted);">${esc(r.no||'—')}</td>
-      <td style="font-weight:600;"><div style="display:flex;align-items:center;">${thumb}<span>${esc(r.name||'')}${isLast?` <span style="font-size:11px;background:#dbeafe;color:var(--primary);padding:1px 6px;border-radius:999px;margin-left:4px;">操作済</span>`:''}</span></div></td>
+      <td style="font-weight:600;">${esc(r.name||'')}${isLast?` <span style="font-size:11px;background:#dbeafe;color:var(--primary);padding:1px 6px;border-radius:999px;margin-left:4px;">操作済</span>`:''}
+      </td>
       <td>${locCell}</td>
       <td><span class="qty-cell ${total===0?'zero':''}">${total}</span></td>
       <td><div class="acts">
@@ -563,6 +482,7 @@ function render(){
 }
 
 
+// ── Add/Edit ──
 function openAdd(){
   id('part-title').textContent='部品を追加'; id('p-key').value=''; id('p-no').value=''; id('p-name').value='';
   id('loc-label').textContent='各保管場所の初期数量';
@@ -603,9 +523,11 @@ function delPart(key,name){
   toast('🗑 削除しました');
 }
 
+// ── Stock ──
 function openStock(key){
   const p=parts[key]; if(!p)return;
   id('sk-key').value=key; id('stock-title').textContent=p.name; id('sk-qty').value=1;
+  // 現在のタブの場所をデフォルトに
   if(curLoc!=='all'){ id('sk-loc').value=curLoc; setSkMode('out'); }
   else { id('sk-loc').value='シンワ倉庫'; setSkMode('in'); }
   updateSkPreview(); open_('ov-stock');
@@ -624,7 +546,6 @@ function updateSkPreview(){
   id('sk-preview').textContent=`${loc}: ${cur} → ${after}`;
 }
 function doStockChange(){
-  if(!currentOperator){ toast('先に作業者を選択してください'); openOperatorModal(); return; }
   const key=id('sk-key').value; const p=parts[key]; if(!p)return;
   const loc=id('sk-loc').value, cur=(p.locs||{})[loc]||0, qty=parseInt(id('sk-qty').value)||0;
   const nv=skMode==='in'?cur+qty:skMode==='out'?Math.max(0,cur-qty):qty;
@@ -637,7 +558,9 @@ function doStockChange(){
   closeOv('ov-stock');
 }
 
+// ── Transfer ──
 function fillTrParts(){
+  // datalistを更新
   const dl=id('tr-part-list');
   dl.innerHTML=Object.entries(parts).map(([k,p])=>
     `<option value="${esc(p.no||'')} - ${esc(p.name||'')}" data-key="${k}">`
@@ -648,6 +571,7 @@ function searchTrPart(){
   id('tr-part').value='';
   id('tr-part-name').textContent='';
   if(!q){updateTrPreview();return;}
+  // 部品番号または部品名で一致するものを探す
   const match=Object.entries(parts).find(([k,p])=>
     (p.no||'').toLowerCase()===q ||
     (p.no+' - '+p.name).toLowerCase()===q ||
@@ -660,18 +584,12 @@ function searchTrPart(){
   }
   updateTrPreview();
 }
-function openTransfer(prefillKey){
-  if(prefillKey && parts[prefillKey]){
-    const p=parts[prefillKey];
-    id('tr-part-input').value=`${p.no||''} - ${p.name}`;
-    id('tr-part').value=prefillKey;
-    id('tr-part-name').textContent=`✅ ${p.no||''} ${p.name}`;
-  } else {
-    id('tr-part-input').value='';
-    id('tr-part').value='';
-    id('tr-part-name').textContent='';
-  }
+function openTransfer(){
+  id('tr-part-input').value='';
+  id('tr-part').value='';
+  id('tr-part-name').textContent='';
   id('tr-qty').value=1;
+  // タブに応じてデフォルト設定
   if(curLoc!=='all'){
     id('tr-from').value='シンワ倉庫';
     id('tr-to').value=curLoc;
@@ -689,7 +607,6 @@ function updateTrPreview(){
   id('tr-preview').textContent=`${from}: ${fq}→${Math.max(0,fq-qty)}　${to}: ${tq}→${tq+qty}`;
 }
 function doTransfer(){
-  if(!currentOperator){ toast('先に作業者を選択してください'); openOperatorModal(); return; }
   const key=id('tr-part').value, from=id('tr-from').value, to=id('tr-to').value, qty=parseInt(id('tr-qty').value)||0;
   if(!key||!from||!to){toast('部品・移動元・移動先を選択してください');return;}
   if(from===to){toast('移動元と移動先が同じです');return;}
@@ -705,6 +622,7 @@ function doTransfer(){
   closeOv('ov-transfer');
 }
 
+// ── Part History ──
 function openPartHist(key){
   const p=parts[key]; if(!p)return;
   openPartKey=key;
@@ -724,12 +642,13 @@ function renderPartHistModal(){
         <span class="phi-type type-${h.type||'edit'}">${TYPE_LABELS[h.type]||h.type}</span>
         <span style="color:var(--muted);font-size:12px;">${fmtDate(h.ts)}</span>
       </div>
-      <div class="phi-detail">${esc(h.detail||'')}${h.operator?` · 👤${esc(h.operator)}`:''}</div>
+      <div class="phi-detail">${esc(h.detail||'')}</div>
     </div>`).join('');
 }
 
+// ── Global History ──
 function addHist(type,key,name,detail){
-  db.ref('history').push({type, partKey:key, name, detail, ts:Date.now(), operator: currentOperator||null});
+  db.ref('history').push({type, partKey:key, name, detail, ts:Date.now()});
 }
 function renderHist(){
   const list=id('hist-list');
@@ -738,11 +657,12 @@ function renderHist(){
     const p=h.partKey?parts[h.partKey]:null;
     const no=p?p.no:(h.no||'');
     const nameStr=`${esc(h.name||'')}${no?` <span style="font-size:10px;color:var(--muted);font-family:monospace;">[${esc(no)}]</span>`:''}`;
-    return `<div class="hi hi-${h.type}"><div class="hi-top"><span class="hi-name">${nameStr}</span><span class="hi-time">${fmtDate(h.ts)}</span></div><div class="hi-detail">[${TYPE_LABELS[h.type]||h.type}] ${esc(h.detail||'')}${h.operator?` · 👤${esc(h.operator)}`:''}</div></div>`;
+    return `<div class="hi hi-${h.type}"><div class="hi-top"><span class="hi-name">${nameStr}</span><span class="hi-time">${fmtDate(h.ts)}</span></div><div class="hi-detail">[${TYPE_LABELS[h.type]||h.type}] ${esc(h.detail||'')}</div></div>`;
   }).join('');
 }
 function toggleHist(){ id('hist-panel').classList.toggle('open'); }
 
+// ── CSV Import ──
 let csvImportData = null;
 
 function handleCSVImport(e){
@@ -753,6 +673,7 @@ function handleCSVImport(e){
   reader.onload = function(ev){
     try {
       let text = ev.target.result;
+      // BOM除去
       if(text.charCodeAt(0)===0xFEFF) text=text.slice(1);
       csvImportData = parseImportCSV(text);
       if(!csvImportData || Object.keys(csvImportData).length===0){
@@ -782,6 +703,7 @@ function parseImportCSV(text){
   const lines = text.split(/\r?\n/).filter(l=>l.trim());
   if(lines.length < 2) return null;
 
+  // ヘッダー（カンマで単純分割）
   const headers = lines[0].split(',').map(h=>h.trim().replace(/^"|"$/g,''));
   const nameIdx = headers.findIndex(h=>h.includes('物品名'));
   const locIdx  = headers.findIndex(h=>h.includes('保管場所'));
@@ -817,6 +739,7 @@ async function doCSVImport(){
   const entries = Object.values(csvImportData);
   let done=0;
 
+  // 既存部品を部品番号/名前でマップ
   const existingMap={};
   Object.entries(parts).forEach(([k,p])=>{
     if(p.no) existingMap[p.no]=k;
@@ -842,6 +765,7 @@ async function doCSVImport(){
   csvImportData=null;
 }
 
+// ── Export ──
 function getExportRows(){
   return Object.values(parts).map(p=>{
     const locs=p.locs||{}, total=LOCS.reduce((s,l)=>s+(locs[l]||0),0);
@@ -870,6 +794,7 @@ function exportExcel(){
   toast('📊 Excelをダウンロードしました');
 }
 
+// ── Scan (納品書スキャン) ──
 let scanImageBase64 = null, scanImageMime = null, scanParsedItems = [];
 
 function openScan(){
@@ -945,6 +870,7 @@ function renderScanResults(){
     id('scan-results').innerHTML='<div style="text-align:center;padding:16px;color:var(--muted);">部品が検出されませんでした</div>';
     return;
   }
+  // 部品番号でマッチング
   const partsByNo={};
   Object.entries(parts).forEach(([k,p])=>{ if(p.no) partsByNo[String(p.no).trim()]=k; });
 
@@ -993,155 +919,7 @@ async function doScanImport(){
   closeOv('ov-scan');
 }
 
-function openPhotoModal(key){
-  const p=parts[key]; if(!p) return;
-  photoPartKey=key;
-  id('photo-title').textContent=p.name;
-  id('photo-status').textContent='';
-  id('photo-camera').value='';
-  id('photo-gallery').value='';
-  id('photo-upload-area').style.display=supabaseUrl?'block':'none';
-  if(!supabaseUrl) id('photo-grid').innerHTML=`<div style="color:var(--muted);font-size:13px;">Supabase未設定のため写真機能は利用できません。<br>設定画面からSupabase URLとAnon Keyを入力してください。</div>`;
-  else renderPhotoGrid(key);
-  open_('ov-photo');
-}
-
-function renderPhotoGrid(key){
-  const photos=(parts[key]||{}).photos||[];
-  const grid=id('photo-grid');
-  if(!photos.length){ grid.innerHTML=`<div style="color:var(--muted);font-size:13px;padding:4px;">写真はまだありません</div>`; return; }
-  grid.innerHTML=photos.map((url,i)=>`
-    <div style="position:relative;">
-      <img src="${url}" onclick="showLightbox('${url}')"
-        style="width:88px;height:88px;object-fit:cover;border-radius:8px;cursor:pointer;border:1px solid var(--border);" />
-      <button onclick="deletePhoto('${key}',${i})"
-        style="position:absolute;top:3px;right:3px;width:22px;height:22px;border-radius:50%;background:rgba(220,38,38,0.85);color:white;border:none;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>
-    </div>`).join('');
-}
-
-async function compressImage(file){
-  return new Promise(resolve=>{
-    const img=new Image();
-    const objUrl=URL.createObjectURL(file);
-    img.onload=()=>{
-      URL.revokeObjectURL(objUrl);
-      const MAX=800;
-      let w=img.naturalWidth, h=img.naturalHeight;
-      if(w>h){ if(w>MAX){h=Math.round(h*MAX/w);w=MAX;} }
-      else { if(h>MAX){w=Math.round(w*MAX/h);h=MAX;} }
-      const canvas=document.createElement('canvas');
-      canvas.width=w; canvas.height=h;
-      canvas.getContext('2d').drawImage(img,0,0,w,h);
-      canvas.toBlob(b=>resolve(b),'image/jpeg',0.5);
-    };
-    img.src=objUrl;
-  });
-}
-
-async function handlePhotoFile(e){
-  const file=e.target.files[0]; if(!file) return;
-  if(!supabaseUrl){ toast('Supabaseが設定されていません'); return; }
-  const status=id('photo-status');
-  status.textContent='圧縮中...';
-  try{
-    const blob=await compressImage(file);
-    const kb=Math.round(blob.size/1024);
-    status.textContent=`アップロード中... (${kb}KB)`;
-    const path=`${photoPartKey}/${Date.now()}.jpg`;
-    const res=await fetch(`${supabaseUrl}/storage/v1/object/${PHOTO_BUCKET}/${path}`,{
-      method:'POST',
-      headers:{'Authorization':`Bearer ${supabaseKey}`,'Content-Type':'image/jpeg'},
-      body:blob
-    });
-    if(!res.ok){ const er=await res.json(); throw new Error(er.error||er.message||'アップロード失敗'); }
-    const url=`${supabaseUrl}/storage/v1/object/public/${PHOTO_BUCKET}/${path}`;
-    const photos=[...((parts[photoPartKey]||{}).photos||[]),url];
-    await db.ref(`parts/${photoPartKey}`).update({photos,updatedAt:Date.now()});
-    toast('✅ 写真をアップロードしました');
-    status.textContent='';
-    e.target.value='';
-    renderPhotoGrid(photoPartKey);
-  }catch(err){
-    status.textContent='❌ '+err.message;
-    toast('❌ '+err.message);
-  }
-}
-
-async function deletePhoto(key,idx){
-  if(!confirm('この写真を削除しますか？')) return;
-  const photos=[...((parts[key]||{}).photos||[])];
-  photos.splice(idx,1);
-  await db.ref(`parts/${key}`).update({photos,updatedAt:Date.now()});
-  renderPhotoGrid(key);
-  toast('🗑 写真を削除しました');
-}
-
-function showLightbox(url){ id('lightbox-img').src=url; id('lightbox').classList.add('open'); }
-function closeLightbox(){ id('lightbox').classList.remove('open'); id('lightbox-img').src=''; }
-
-let qrStream=null, qrScanning=false;
-const qrCanvas=document.createElement('canvas');
-const qrCtx=qrCanvas.getContext('2d',{willReadFrequently:true});
-
-function openQR(){
-  id('qr-result').innerHTML='';
-  id('qr-manual').value='';
-  open_('ov-qr');
-}
-async function startQRScan(){
-  try{
-    qrStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});
-    const v=id('qr-video'); v.srcObject=qrStream; v.style.display='block';
-    id('qr-idle').style.display='none';
-    id('qr-cam-btn').style.display='none';
-    id('qr-stop-btn').style.display='inline-block';
-    qrScanning=true;
-    requestAnimationFrame(qrTick);
-  }catch(e){
-    toast('カメラを利用できません。番号を直接入力してください');
-  }
-}
-function stopQRScan(){
-  qrScanning=false;
-  if(qrStream) qrStream.getTracks().forEach(t=>t.stop());
-  const v=id('qr-video'); v.style.display='none';
-  id('qr-idle').style.display='block';
-  id('qr-cam-btn').style.display='inline-block';
-  id('qr-stop-btn').style.display='none';
-}
-function qrTick(){
-  if(!qrScanning) return;
-  const v=id('qr-video');
-  if(v.readyState===v.HAVE_ENOUGH_DATA){
-    qrCanvas.width=v.videoWidth; qrCanvas.height=v.videoHeight;
-    qrCtx.drawImage(v,0,0,qrCanvas.width,qrCanvas.height);
-    const img=qrCtx.getImageData(0,0,qrCanvas.width,qrCanvas.height);
-    const code=window.jsQR?jsQR(img.data,img.width,img.height):null;
-    if(code&&code.data){ stopQRScan(); lookupQR(code.data); }
-  }
-  requestAnimationFrame(qrTick);
-}
-function lookupQR(value){
-  const v=(value||'').trim(); if(!v) return;
-  const match=Object.entries(parts).find(([k,p])=>String(p.no||'').trim()===v);
-  if(!match){
-    id('qr-result').innerHTML=`<div style="padding:12px;background:#fef2f2;border-radius:8px;color:var(--danger);font-size:13px;">「${esc(v)}」に一致する部品が見つかりません</div>`;
-    return;
-  }
-  const [key,p]=match;
-  const locs=p.locs||{};
-  id('qr-result').innerHTML=`
-    <div style="border:1px solid var(--border);border-radius:10px;padding:14px;">
-      <div style="font-weight:700;margin-bottom:2px;">${esc(p.name)}</div>
-      <div style="font-family:monospace;font-size:12px;color:var(--muted);margin-bottom:10px;">${esc(p.no||'')}</div>
-      <div class="loc-chips" style="margin-bottom:12px;">${LOCS.map(l=>`<span class="loc-chip ${(locs[l]||0)>0?'has':''}">${l}: ${locs[l]||0}</span>`).join('')}</div>
-      <div style="display:flex;gap:8px;">
-        <button class="btn btn-success" style="flex:1;" onclick="closeOv('ov-qr');openStock('${key}')">在庫を変更</button>
-        <button class="btn btn-warning" style="flex:1;" onclick="closeOv('ov-qr');openTransfer('${key}')">移動する</button>
-      </div>
-    </div>`;
-}
-
+// ── Helpers ──
 function id(x){return document.getElementById(x);}
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function fmtDate(ts){if(!ts)return'—';const d=new Date(ts);return d.toLocaleString('ja-JP',{timeZone:'Asia/Tokyo',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});}
