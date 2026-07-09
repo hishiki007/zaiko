@@ -1098,18 +1098,22 @@ function openQR(){
 }
 function onQRPhotoSelect(e){
   const file=e.target.files[0]; if(!file) return;
-  id('qr-result').innerHTML=`<div style="padding:12px;color:var(--muted);font-size:13px;">解析中...</div>`;
+  toast('📷 解析中...');
+  id('qr-result').innerHTML=`<div style="padding:8px 12px;background:#f8fafc;border-radius:6px;font-size:13px;color:var(--muted);">📷 解析中...</div>`;
   const img=new Image();
   const objUrl=URL.createObjectURL(file);
   img.onload=()=>{
     URL.revokeObjectURL(objUrl);
     const code=findQRInImage(img);
     if(code){
+      toast('✅ QR読取: '+code);
       lookupQR(code);
     } else {
-      id('qr-result').innerHTML=`<div style="padding:12px;background:#fef2f2;border-radius:8px;color:var(--danger);font-size:13px;">写真からQRコードを読み取れませんでした。QRコード部分だけが大きく写るように、もっと近づいて撮り直してみてください。反射や汚れがあると読み取りにくくなります。</div>`;
+      toast('❌ QRコードを読み取れませんでした');
+      id('qr-result').innerHTML=`<div style="padding:12px;background:#fef2f2;border-radius:8px;color:var(--danger);font-size:13px;">読み取れませんでした。QRコードが正面を向き、明るい場所で撮影してください。</div>`;
     }
   };
+  img.onerror=()=>{ toast('画像の読み込みに失敗しました'); };
   img.src=objUrl;
   e.target.value='';
 }
