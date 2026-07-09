@@ -1,0 +1,1240 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>メリタ部品在庫管理</title>
+<link rel="apple-touch-icon" href="icon.png" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-title" content="メリタ在庫" />
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsqr/1.4.0/jsQR.js"></script>
+<style>
+:root {
+  --primary: #2563eb; --primary-dark: #1d4ed8;
+  --success: #16a34a; --danger: #dc2626; --warning: #d97706;
+  --bg: #f1f5f9; --card: #fff; --border: #e2e8f0;
+  --text: #1e293b; --muted: #64748b;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif; background: var(--bg); color: var(--text); }
+
+header { background: var(--primary); color: white; padding: 0 16px; height: 56px; display: flex; align-items: center; justify-content: space-between; position: -webkit-sticky; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+header h1 { font-size: 16px; font-weight: 700; }
+.header-right { display: flex; align-items: center; gap: 8px; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: #86efac; box-shadow: 0 0 6px #86efac; }
+.dot.off { background: #fca5a5; box-shadow: none; }
+
+.btn { padding: 8px 14px; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
+.btn:active { transform: scale(0.97); }
+.btn-primary { background: var(--primary); color: white; }
+.btn-primary:hover { background: var(--primary-dark); }
+.btn-success { background: var(--success); color: white; }
+.btn-warning { background: var(--warning); color: white; }
+.btn-outline { background: white; color: var(--text); border: 1px solid var(--border); }
+.btn-outline:hover { background: var(--bg); }
+.btn-danger { background: var(--danger); color: white; }
+.btn-sm { padding: 5px 10px; font-size: 12px; }
+.btn-ghost { background: rgba(255,255,255,0.15); color: white; border: 1px solid rgba(255,255,255,0.3); }
+.btn-ghost:hover { background: rgba(255,255,255,0.25); }
+
+#setup { max-width: 500px; margin: 40px auto; padding: 16px; }
+.card { background: var(--card); border-radius: 12px; padding: 24px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); }
+.card h2 { font-size: 18px; margin-bottom: 8px; }
+.card p { color: var(--muted); font-size: 13px; margin-bottom: 20px; line-height: 1.6; }
+.field { margin-bottom: 14px; }
+.field label { display: block; font-size: 12px; font-weight: 600; color: var(--muted); margin-bottom: 5px; }
+.field input, .field select { width: 100%; padding: 9px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; outline: none; background: white; }
+.field input:focus, .field select:focus { border-color: var(--primary); }
+.err { color: var(--danger); font-size: 13px; margin-top: 10px; display: none; }
+
+#app { display: none; }
+
+.toolbar { background: var(--card); border-bottom: 1px solid var(--border); padding: 10px 16px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.search { flex: 1; min-width: 150px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; outline: none; }
+.search:focus { border-color: var(--primary); }
+
+.loc-tabs { background: var(--card); border-bottom: 1px solid var(--border); padding: 0 16px; display: flex; overflow-x: auto; }
+.loc-tab { padding: 10px 14px; font-size: 13px; font-weight: 600; cursor: pointer; border-bottom: 3px solid transparent; color: var(--muted); white-space: nowrap; transition: all 0.15s; }
+.loc-tab:hover { color: var(--text); }
+.loc-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+.loc-tab .cnt { background: var(--bg); padding: 1px 7px; border-radius: 999px; font-size: 11px; margin-left: 5px; }
+.loc-tab.active .cnt { background: #dbeafe; color: var(--primary); }
+
+.table-wrap { padding: 16px; overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; background: var(--card); border-radius: 10px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+th { background: #f8fafc; padding: 10px 12px; text-align: left; font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid var(--border); white-space: nowrap; }
+td { padding: 10px 12px; border-bottom: 1px solid var(--border); font-size: 13px; vertical-align: middle; }
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: #f8fafc; }
+.acts { display: flex; gap: 5px; flex-wrap: wrap; }
+.qty-cell { font-weight: 700; font-size: 15px; }
+.zero { color: #cbd5e1; }
+.loc-chips { display: flex; gap: 5px; flex-wrap: wrap; }
+.loc-chip { font-size: 11px; padding: 2px 7px; border-radius: 999px; border: 1px solid var(--border); background: var(--bg); white-space: nowrap; }
+.loc-chip.has { background: #dcfce7; border-color: #86efac; color: var(--success); font-weight: 600; }
+
+.part-thumb { width: 40px; height: 40px; border-radius: 6px; object-fit: cover; border: 1px solid var(--border); cursor: pointer; }
+.part-thumb-none { width: 40px; height: 40px; border-radius: 6px; border: 1px dashed var(--border); display: flex; align-items: center; justify-content: center; font-size: 18px; color: var(--border); }
+
+.empty { text-align: center; padding: 48px 16px; color: var(--muted); }
+.empty .ico { font-size: 40px; margin-bottom: 10px; }
+
+.overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); display: flex; align-items: center; justify-content: center; z-index: 200; opacity: 0; pointer-events: none; transition: opacity 0.2s; padding: 16px; }
+.overlay.open { opacity: 1; pointer-events: all; }
+.modal { background: var(--card); border-radius: 12px; padding: 24px; width: 100%; max-width: 460px; box-shadow: 0 20px 60px rgba(0,0,0,0.25); transform: translateY(16px); transition: transform 0.2s; max-height: 90vh; overflow-y: auto; }
+.overlay.open .modal { transform: translateY(0); }
+.modal h3 { font-size: 17px; margin-bottom: 18px; }
+.modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+.photo-area { border: 2px dashed var(--border); border-radius: 10px; padding: 16px; text-align: center; cursor: pointer; transition: border-color 0.2s; margin-bottom: 4px; }
+.photo-area:hover { border-color: var(--primary); }
+.photo-area img { max-width: 100%; max-height: 160px; border-radius: 8px; object-fit: contain; }
+.photo-area .ph-hint { color: var(--muted); font-size: 13px; margin-top: 8px; }
+.photo-area .ph-icon { font-size: 32px; }
+
+.transfer-preview { background: var(--bg); border-radius: 8px; padding: 12px; font-size: 13px; color: var(--muted); text-align: center; margin-top: 8px; }
+
+#hist-panel { position: fixed; right: 0; top: 56px; bottom: 0; width: 320px; background: var(--card); border-left: 1px solid var(--border); transform: translateX(100%); transition: transform 0.3s; z-index: 150; display: flex; flex-direction: column; }
+#hist-panel.open { transform: translateX(0); }
+.panel-head { padding: 14px 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; font-weight: 700; font-size: 14px; }
+.panel-close { background: none; border: none; font-size: 18px; cursor: pointer; color: var(--muted); }
+.hist-list { overflow-y: auto; flex: 1; padding: 10px; }
+.hi { padding: 10px; border-radius: 8px; margin-bottom: 6px; border: 1px solid var(--border); font-size: 12px; }
+.hi-top { display: flex; justify-content: space-between; margin-bottom: 3px; }
+.hi-name { font-weight: 600; font-size: 13px; }
+.hi-time { color: var(--muted); font-size: 11px; }
+.hi-detail { color: var(--muted); }
+.hi-move { border-left: 3px solid var(--warning); }
+.hi-add { border-left: 3px solid var(--primary); }
+.hi-edit { border-left: 3px solid var(--muted); }
+.hi-del { border-left: 3px solid #94a3b8; }
+.hi-in { border-left: 3px solid var(--success); }
+.hi-out { border-left: 3px solid var(--danger); }
+
+.part-hist-item { padding: 10px 12px; border-radius: 8px; margin-bottom: 6px; border: 1px solid var(--border); font-size: 13px; }
+.part-hist-item .phi-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px; }
+.part-hist-item .phi-type { font-weight: 700; font-size: 12px; padding: 2px 8px; border-radius: 999px; }
+.type-in { background: #dcfce7; color: var(--success); }
+.type-out { background: #fee2e2; color: var(--danger); }
+.type-move { background: #fef3c7; color: var(--warning); }
+.type-add { background: #dbeafe; color: var(--primary); }
+.type-edit { background: #f1f5f9; color: var(--muted); }
+.type-del { background: #f1f5f9; color: var(--muted); }
+.type-set { background: #ede9fe; color: #7c3aed; }
+.phi-detail { color: var(--muted); font-size: 12px; }
+
+#lightbox { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: flex; align-items: center; justify-content: center; z-index: 500; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+#lightbox.open { opacity: 1; pointer-events: all; }
+#lightbox img { max-width: 90vw; max-height: 85vh; border-radius: 10px; object-fit: contain; }
+#lightbox-close { position: absolute; top: 16px; right: 20px; color: white; font-size: 28px; cursor: pointer; }
+
+#toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #1e293b; color: white; padding: 10px 20px; border-radius: 999px; font-size: 13px; font-weight: 500; opacity: 0; transition: opacity 0.3s; z-index: 300; pointer-events: none; white-space: nowrap; }
+#toast.show { opacity: 1; }
+
+@media (max-width: 600px) {
+  .toolbar { padding: 8px 12px; }
+  .table-wrap { padding: 10px 12px 16px; }
+  #hist-panel { width: 100%; }
+}
+
+.scan-drop { border: 2px dashed var(--border); border-radius: 10px; padding: 24px 16px; text-align: center; cursor: pointer; transition: border-color 0.2s; background: var(--bg); }
+.scan-drop:hover { border-color: var(--primary); }
+.scan-drop img { max-width: 100%; max-height: 220px; border-radius: 8px; object-fit: contain; margin-top: 8px; }
+.scan-result-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 6px; font-size: 13px; }
+.scan-result-item.matched { border-color: #86efac; background: #f0fdf4; }
+.scan-result-item.unmatched { border-color: #fca5a5; background: #fef2f2; }
+.scan-result-item input[type=checkbox] { width: 18px; height: 18px; cursor: pointer; }
+.scan-result-item .sri-name { flex: 1; font-weight: 600; }
+.scan-result-item .sri-qty { font-size: 14px; font-weight: 700; color: var(--success); min-width: 60px; text-align: right; }
+.scan-badge { font-size: 10px; padding: 2px 6px; border-radius: 999px; margin-left: 6px; }
+.scan-badge.ok { background: #dcfce7; color: var(--success); }
+.scan-badge.ng { background: #fee2e2; color: var(--danger); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🔧 部品在庫管理</h1>
+  <div class="header-right">
+    <span class="dot" id="dot"></span>
+    <button class="btn btn-ghost btn-sm" onclick="openOperatorModal()">👤 <span id="cur-op-label">未選択</span></button>
+    <button class="btn btn-ghost btn-sm" onclick="toggleHist()">全履歴</button>
+    <button class="btn btn-ghost btn-sm" onclick="doLogout()">設定</button>
+  </div>
+</header>
+
+<div id="setup">
+  <div class="card">
+    <h2>🔥 Firebase 設定</h2>
+    <p>接続情報を入力してください。5人で同じ情報を使えばリアルタイム共有できます。</p>
+    <div class="field"><label>API Key</label><input id="f-key" placeholder="AIzaSy..." /></div>
+    <div class="field"><label>Auth Domain</label><input id="f-auth" placeholder="xxx.firebaseapp.com" /></div>
+    <div class="field"><label>Database URL</label><input id="f-db" placeholder="https://xxx.firebasedatabase.app" /></div>
+    <div class="field"><label>Project ID</label><input id="f-pid" placeholder="your-project-id" /></div>
+    <div class="field"><label>Anthropic API Key（納品書スキャン用・任意）</label><input id="f-anthropic" placeholder="sk-ant-api03-..." type="password" /></div>
+    <div class="field"><label>Supabase URL（写真保存用・任意）</label><input id="f-sb-url" placeholder="https://xxxx.supabase.co" /></div>
+    <div class="field"><label>Supabase Anon Key（写真保存用・任意）</label><input id="f-sb-key" placeholder="eyJ..." type="password" /></div>
+    <button class="btn btn-primary" style="width:100%;padding:11px;margin-top:4px;" onclick="connect()">接続して開始 →</button>
+    <p class="err" id="setup-err"></p>
+  </div>
+</div>
+
+<div id="app">
+  <div style="position:-webkit-sticky;position:sticky;top:56px;z-index:99;background:var(--card);box-shadow:0 2px 6px rgba(0,0,0,0.08);">
+  <div class="toolbar">
+    <input class="search" id="q" type="search" placeholder="🔍 部品名・部品番号で検索..." oninput="render()" />
+    <button class="btn btn-primary" onclick="openAdd()">＋ 部品追加</button>
+    <button class="btn btn-warning" onclick="openTransfer()">↔ 移動</button>
+    <button class="btn btn-outline" onclick="exportCSV()">CSV出力</button>
+    <button class="btn btn-outline" onclick="exportExcel()">Excel出力</button>
+    <label class="btn btn-outline" for="csv-import-input" style="cursor:pointer;">📥 CSVインポート</label>
+    <input type="file" id="csv-import-input" accept=".csv" style="display:none" onchange="handleCSVImport(event)" />
+    <button class="btn btn-success" onclick="openScan()" id="scan-btn" style="display:none;">📷 納品書スキャン</button>
+    <button class="btn btn-success" onclick="openQR()">📱 QRスキャン</button>
+  </div>
+
+  <div class="loc-tabs">
+    <div class="loc-tab active" data-loc="all" onclick="setLocTab(this,'all')">すべて<span class="cnt" id="cnt-all">0</span></div>
+    <div class="loc-tab" data-loc="シンワ倉庫" onclick="setLocTab(this,'シンワ倉庫')">シンワ倉庫<span class="cnt" id="cnt-0">0</span></div>
+    <div class="loc-tab" data-loc="アラン" onclick="setLocTab(this,'アラン')">アラン<span class="cnt" id="cnt-1">0</span></div>
+    <div class="loc-tab" data-loc="ゆーや" onclick="setLocTab(this,'ゆーや')">ゆーや<span class="cnt" id="cnt-2">0</span></div>
+    <div class="loc-tab" data-loc="しゅん" onclick="setLocTab(this,'しゅん')">しゅん<span class="cnt" id="cnt-3">0</span></div>
+    <div class="loc-tab" data-loc="たくや" onclick="setLocTab(this,'たくや')">たくや<span class="cnt" id="cnt-4">0</span></div>
+  </div>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>部品番号</th>
+          <th>部品名</th>
+          <th id="th-loc">保管場所 / 数量</th>
+          <th>合計</th>
+          <th>操作</th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<div class="overlay" id="ov-csv" onclick="closeOv('ov-csv',event)">
+  <div class="modal" style="max-width:500px;">
+    <h3>📥 CSVインポート確認</h3>
+    <div id="csv-preview" style="background:var(--bg);border-radius:8px;padding:14px;margin-bottom:16px;font-size:13px;"></div>
+    <div style="background:#fef3c7;border:1px solid #f59e0b;border-radius:8px;padding:12px;font-size:13px;color:#92400e;margin-bottom:16px;">
+      ⚠️ 既存の部品データは<strong>上書き</strong>されます。新規追加のみの場合は既存データはそのままです。
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeOv('ov-csv')">キャンセル</button>
+      <button class="btn btn-primary" id="csv-import-btn" onclick="doCSVImport()">インポート実行</button>
+    </div>
+  </div>
+</div>
+
+<div id="hist-panel">
+  <div class="panel-head">
+    <span>全操作履歴</span>
+    <button class="panel-close" onclick="toggleHist()">✕</button>
+  </div>
+  <div class="hist-list" id="hist-list"></div>
+</div>
+
+<div class="overlay" id="ov-part" onclick="closeOv('ov-part',event)">
+  <div class="modal">
+    <h3 id="part-title">部品を追加</h3>
+    <input type="hidden" id="p-key" />
+
+
+    <div class="row2">
+      <div class="field"><label>部品番号</label><input id="p-no" placeholder="例: P-001" /></div>
+      <div class="field"><label>部品名 *</label><input id="p-name" placeholder="例: ボルト M6" /></div>
+    </div>
+    <div style="margin-top:4px;">
+      <p style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:10px;" id="loc-label">各保管場所の初期数量</p>
+      <div class="row2" id="loc-inputs"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeOv('ov-part')">キャンセル</button>
+      <button class="btn btn-primary" onclick="savePart()">保存</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="ov-transfer" onclick="closeOv('ov-transfer',event)">
+  <div class="modal">
+    <h3>↔ 部品を移動</h3>
+    <div class="field">
+      <label>部品番号または部品名</label>
+      <input type="text" id="tr-part-input" placeholder="例: P-001 または ボルト" oninput="searchTrPart()" autocomplete="off" list="tr-part-list" />
+      <datalist id="tr-part-list"></datalist>
+      <input type="hidden" id="tr-part" />
+      <div id="tr-part-name" style="font-size:12px;color:var(--success);margin-top:4px;font-weight:600;"></div>
+    </div>
+    <div class="row2">
+      <div class="field"><label>移動元</label>
+        <select id="tr-from" onchange="updateTrPreview()">
+          <option value="">選択...</option>
+          <option>シンワ倉庫</option><option>アラン</option><option>ゆーや</option><option>しゅん</option><option>たくや</option>
+        </select>
+      </div>
+      <div class="field"><label>移動先</label>
+        <select id="tr-to" onchange="updateTrPreview()">
+          <option value="">選択...</option>
+          <option>シンワ倉庫</option><option>アラン</option><option>ゆーや</option><option>しゅん</option><option>たくや</option>
+        </select>
+      </div>
+    </div>
+    <div class="field"><label>移動数量</label>
+      <input type="number" id="tr-qty" value="1" min="1" style="font-size:20px;text-align:center;padding:10px;" oninput="updateTrPreview()" />
+    </div>
+    <div class="transfer-preview" id="tr-preview">移動元と移動先を選択してください</div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeOv('ov-transfer')">キャンセル</button>
+      <button class="btn btn-warning" onclick="doTransfer()">移動を実行</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="ov-stock" onclick="closeOv('ov-stock',event)">
+  <div class="modal">
+    <h3 id="stock-title">在庫を変更</h3>
+    <input type="hidden" id="sk-key" />
+    <div class="field"><label>保管場所</label>
+      <select id="sk-loc" onchange="updateSkPreview()">
+        <option>シンワ倉庫</option><option>アラン</option><option>ゆーや</option><option>しゅん</option><option>たくや</option>
+      </select>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:14px;">
+      <button class="btn" id="sk-btn-in" style="flex:1;background:#dcfce7;color:var(--success);border:2px solid var(--success);" onclick="setSkMode('in')">📥 入庫</button>
+      <button class="btn" id="sk-btn-out" style="flex:1;border:2px solid var(--border);" onclick="setSkMode('out')">📤 出庫</button>
+      <button class="btn" id="sk-btn-set" style="flex:1;border:2px solid var(--border);" onclick="setSkMode('set')">✏️ 直接指定</button>
+    </div>
+    <div class="field"><label id="sk-qty-label">入庫数量</label>
+      <input type="number" id="sk-qty" value="1" min="0" style="font-size:20px;text-align:center;padding:10px;" oninput="updateSkPreview()" />
+    </div>
+    <div class="transfer-preview" id="sk-preview"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeOv('ov-stock')">キャンセル</button>
+      <button class="btn btn-success" onclick="doStockChange()">確定</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="ov-phist" onclick="closeOv('ov-phist',event)">
+  <div class="modal" style="max-width:500px;">
+    <h3 id="phist-title">📋 変更履歴</h3>
+    <div id="phist-body" style="max-height:60vh;overflow-y:auto;"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="openPartKey=null;closeOv('ov-phist')">閉じる</button>
+    </div>
+  </div>
+</div>
+
+<div id="lightbox" onclick="closeLightbox()">
+  <span id="lightbox-close">✕</span>
+  <img id="lightbox-img" src="" alt="" />
+</div>
+
+<div class="overlay" id="ov-scan" onclick="closeOv('ov-scan',event)">
+  <div class="modal" style="max-width:500px;">
+    <h3>📷 納品書スキャン → シンワ倉庫へ自動入庫</h3>
+    <div id="scan-preview-area" style="text-align:center;padding:12px 0 8px;">
+      <div style="font-size:40px;">📄</div>
+      <div style="font-size:13px;color:var(--muted);margin-top:4px;">納品書の写真を選択してください</div>
+    </div>
+    <input type="file" id="scan-file" accept="image/*" onchange="onScanFileSelect(event)"
+      style="display:block;width:100%;margin-top:10px;padding:12px;border:2px dashed var(--border);border-radius:10px;background:var(--bg);font-size:14px;cursor:pointer;color:var(--text);" />
+    <div id="scan-img-preview" style="margin-top:10px;text-align:center;display:none;">
+      <img id="scan-img-el" style="max-width:100%;max-height:200px;border-radius:8px;object-fit:contain;" />
+    </div>
+    <div id="scan-analyze-area" style="margin-top:12px;display:none;">
+      <button class="btn btn-primary" style="width:100%;padding:11px;" onclick="doScanAnalyze()" id="scan-analyze-btn">🤖 AIで解析する</button>
+    </div>
+    <div id="scan-results" style="margin-top:14px;"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeOv('ov-scan')">キャンセル</button>
+      <button class="btn btn-success" id="scan-confirm-btn" onclick="doScanImport()" style="display:none;">✅ シンワ倉庫へ入庫</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="ov-photo" onclick="closeOv('ov-photo',event)">
+  <div class="modal" style="max-width:500px;">
+    <h3>📸 <span id="photo-title"></span> の写真</h3>
+    <div id="photo-grid" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;min-height:50px;"></div>
+    <div id="photo-upload-area">
+      <div style="display:flex;gap:8px;">
+        <label class="btn btn-primary" style="flex:1;text-align:center;cursor:pointer;" for="photo-camera">
+          📷 カメラで撮影
+        </label>
+        <label class="btn btn-outline" style="flex:1;text-align:center;cursor:pointer;" for="photo-gallery">
+          🖼 アルバムから選択
+        </label>
+      </div>
+      <input type="file" id="photo-camera" accept="image/*" capture="environment" style="display:none" onchange="handlePhotoFile(event)" />
+      <input type="file" id="photo-gallery" accept="image/*" style="display:none" onchange="handlePhotoFile(event)" />
+      <div id="photo-status" style="margin-top:10px;font-size:13px;color:var(--muted);text-align:center;min-height:20px;"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeOv('ov-photo')">閉じる</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="ov-operator" onclick="closeOv('ov-operator',event)">
+  <div class="modal" style="max-width:360px;">
+    <h3>作業者を選択</h3>
+    <p style="font-size:12px;color:var(--muted);margin-top:-12px;margin-bottom:14px;">出庫・移動を記録した人として履歴に残ります。鉛筆アイコンで名前を編集できます。</p>
+    <div id="operator-list" style="display:flex;flex-direction:column;gap:8px;"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeOv('ov-operator')">閉じる</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="ov-qr" onclick="closeOv('ov-qr',event)">
+  <div class="modal" style="max-width:420px;">
+    <h3>📱 バーコード / QRスキャン</h3>
+    <!-- 結果を上部に表示（スクロール不要） -->
+    <div id="qr-result" style="margin-bottom:10px;min-height:20px;"></div>
+    <div id="qr-viewport" style="position:relative;width:100%;aspect-ratio:4/3;background:#0f172a;border-radius:10px;overflow:hidden;display:flex;align-items:center;justify-content:center;margin-bottom:10px;">
+      <video id="qr-video" autoplay playsinline muted style="width:100%;height:100%;object-fit:cover;display:none;"></video>
+      <div id="qr-idle" style="color:#94a3b8;font-size:13px;text-align:center;padding:0 24px;">カメラを起動してバーコードまたはQRコードを写してください</div>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:10px;">
+      <button class="btn btn-primary" style="flex:1;" id="qr-cam-btn" onclick="startQRScan()">カメラを起動</button>
+      <button class="btn btn-outline" id="qr-stop-btn" style="display:none;" onclick="stopQRScan()">停止</button>
+    </div>
+    <label class="btn btn-success" style="display:block;text-align:center;cursor:pointer;margin-bottom:10px;" for="qr-photo-input">📷 写真で読み取る</label>
+    <input type="file" id="qr-photo-input" accept="image/*" capture="environment" style="display:none" onchange="onQRPhotoSelect(event)" />
+    <div class="field"><label>部品番号・部品名を直接入力</label>
+      <input type="text" id="qr-manual" placeholder="例: 27313 またはフィルター" onkeydown="if(event.key==='Enter'){lookupQR(this.value);}" style="font-size:16px;" />
+    </div>
+    <button class="btn btn-primary" style="width:100%;margin-top:6px;" onclick="lookupQR(id('qr-manual').value)">🔍 検索</button>
+    <div class="modal-footer" style="margin-top:10px;">
+      <button class="btn btn-outline" onclick="stopQRScan();closeOv('ov-qr')">閉じる</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+
+<script>
+const LOCS = ['シンワ倉庫','アラン','ゆーや','しゅん','たくや'];
+const TYPE_LABELS = { move:'移動', add:'追加', edit:'編集', del:'削除', in:'入庫', out:'出庫', set:'直接指定' };
+let db=null, parts={}, hist=[];
+let curLoc='all', skMode='in', lastOpKey=null;
+let partHistRef=null;
+let openPartKey=null;
+let supabaseUrl='', supabaseKey='';
+const PHOTO_BUCKET='parts-photos';
+let photoPartKey=null;
+
+let OPERATORS = JSON.parse(localStorage.getItem('operators_v1')||'["シンワ倉庫","アラン","ゆーや","しゅん","たくや"]');
+let currentOperator = localStorage.getItem('current_operator')||null;
+function openOperatorModal(){ renderOperatorList(); open_('ov-operator'); }
+function renderOperatorList(){
+  id('operator-list').innerHTML = OPERATORS.map((name,i)=>`
+    <div style="display:flex;gap:6px;">
+      <button class="btn ${name===currentOperator?'btn-primary':'btn-outline'}" style="flex:1;text-align:left;" onclick="selectOperator('${esc(name)}')">${esc(name)}</button>
+      <button class="btn btn-outline btn-sm" onclick="renameOperator(${i})">✎</button>
+    </div>`).join('');
+}
+function selectOperator(name){
+  currentOperator=name;
+  localStorage.setItem('current_operator',name);
+  id('cur-op-label').textContent=name;
+  closeOv('ov-operator');
+}
+function renameOperator(i){
+  const nn=prompt('名前を編集',OPERATORS[i]);
+  if(nn&&nn.trim()){
+    const old=OPERATORS[i]; OPERATORS[i]=nn.trim();
+    localStorage.setItem('operators_v1',JSON.stringify(OPERATORS));
+    if(currentOperator===old) selectOperator(OPERATORS[i]);
+    renderOperatorList();
+  }
+}
+id('cur-op-label').textContent=currentOperator||'未選択';
+
+function connect() {
+  if(typeof firebase==='undefined'){ showErr('Firebase読み込み中です。少し待ってから再度押してください。'); return; }
+  const cfg = { apiKey:id('f-key').value.trim(), authDomain:id('f-auth').value.trim(), databaseURL:id('f-db').value.trim(), projectId:id('f-pid').value.trim() };
+  if (!cfg.apiKey||!cfg.databaseURL||!cfg.projectId) { showErr('API Key、Database URL、Project ID は必須です'); return; }
+  const anthropicKey=id('f-anthropic').value.trim();
+  if(anthropicKey) localStorage.setItem('anthropic_key', anthropicKey);
+  const sbUrl=id('f-sb-url').value.trim(), sbKey=id('f-sb-key').value.trim();
+  if(sbUrl) localStorage.setItem('sb_url', sbUrl);
+  if(sbKey) localStorage.setItem('sb_key', sbKey);
+  localStorage.setItem('inv_cfg', JSON.stringify(cfg));
+  initFB(cfg);
+}
+function initFB(cfg) {
+  try {
+    if (firebase.apps.length) firebase.app().delete().catch(()=>{});
+    firebase.initializeApp(cfg);
+    firebase.auth().signInAnonymously().then(() => {
+      db = firebase.database();
+      db.ref('.info/connected').on('value', s => { id('dot').className='dot'+(s.val()?'':' off'); });
+      db.ref('parts').on('value', s => { parts=s.val()||{}; render(); updateTabs(); fillTrParts(); });
+      db.ref('history').limitToLast(100).on('child_added', s => {
+        const v=s.val(); hist.unshift(v); if(hist.length>100) hist.pop();
+        renderHist(); if(openPartKey) renderPartHistModal();
+      });
+      id('setup').style.display='none';
+      id('app').style.display='block';
+      if(localStorage.getItem('anthropic_key')) id('scan-btn').style.display='inline-block';
+      const sbUrl2=localStorage.getItem('sb_url'), sbKey2=localStorage.getItem('sb_key');
+      if(sbUrl2 && sbKey2){ supabaseUrl=sbUrl2.replace(/\/$/,''); supabaseKey=sbKey2; }
+    }).catch(e => { showErr('認証エラー: '+e.message); });
+  } catch(e) { showErr('接続エラー: '+e.message); }
+}
+function doLogout() { if(confirm('設定画面に戻りますか？')){localStorage.removeItem('inv_cfg');location.reload();} }
+function tryAutoConnect(){
+  const saved=localStorage.getItem('inv_cfg');
+  if(!saved) return;
+  try{
+    const c=JSON.parse(saved);
+    id('f-key').value=c.apiKey||'';
+    id('f-auth').value=c.authDomain||'';
+    id('f-db').value=c.databaseURL||'';
+    id('f-pid').value=c.projectId||'';
+    const ak=localStorage.getItem('anthropic_key'); if(ak) id('f-anthropic').value=ak;
+    const sbU=localStorage.getItem('sb_url'); if(sbU) id('f-sb-url').value=sbU;
+    const sbK=localStorage.getItem('sb_key'); if(sbK) id('f-sb-key').value=sbK;
+    if(typeof firebase==='undefined'){
+      setTimeout(tryAutoConnect, 300);
+      return;
+    }
+    initFB(c);
+  }catch(e){}
+}
+tryAutoConnect();
+
+function setLocTab(el,loc){document.querySelectorAll('.loc-tab').forEach(t=>t.classList.remove('active'));el.classList.add('active');curLoc=loc;id('th-loc').textContent=loc==='all'?'保管場所 / 数量':loc+' の数量';render();}
+function updateTabs(){
+  id('cnt-all').textContent=Object.keys(parts).length;
+  LOCS.forEach((l,i)=>{ id('cnt-'+i).textContent=Object.values(parts).filter(p=>p.locs&&(p.locs[l]||0)>0).length; });
+}
+
+function render(){
+  const q=id('q').value.toLowerCase();
+  let rows=Object.entries(parts).map(([k,p])=>({k,...p}));
+  if(curLoc!=='all' && !q) rows=rows.filter(r=>r.locs&&(r.locs[curLoc]||0)>0);
+  if(q) rows=rows.filter(r=>(r.name||'').toLowerCase().includes(q)||(r.no||'').toLowerCase().includes(q));
+
+  rows.sort((a,b)=>{
+    if(a.k===lastOpKey) return -1;
+    if(b.k===lastOpKey) return 1;
+    return (b.updatedAt||0)-(a.updatedAt||0);
+  });
+
+  const tbody=id('tbody');
+  if(!rows.length){tbody.innerHTML=`<tr><td colspan="6"><div class="empty"><div class="ico">🔧</div><p>部品が見つかりません</p></div></td></tr>`;return;}
+  tbody.innerHTML=rows.map(r=>{
+    const locs=r.locs||{};
+    const total=LOCS.reduce((s,l)=>s+(locs[l]||0),0);
+    const locCell=curLoc==='all'
+      ?`<div class="loc-chips">${LOCS.map(l=>`<span class="loc-chip ${(locs[l]||0)>0?'has':''}">${l}: ${locs[l]||0}</span>`).join('')}</div>`
+      :`<span class="qty-cell ${(locs[curLoc]||0)===0?'zero':''}">${locs[curLoc]||0}</span>`;
+    const isLast = r.k===lastOpKey;
+    const photos = r.photos||[];
+    const thumb = photos.length>0
+      ? `<img src="${photos[0]}" onclick="openPhotoModal('${r.k}')" style="width:36px;height:36px;object-fit:cover;border-radius:5px;border:1px solid var(--border);margin-right:6px;vertical-align:middle;cursor:pointer;flex-shrink:0;" />`
+      : (supabaseUrl ? `<span onclick="openPhotoModal('${r.k}')" style="display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:5px;border:1px dashed var(--border);background:var(--bg);font-size:16px;margin-right:6px;cursor:pointer;vertical-align:middle;flex-shrink:0;">📷</span>` : '');
+    return `<tr id="row-${r.k}" style="${isLast?'background:#eff6ff;border-left:3px solid var(--primary);':''}">
+      <td style="font-family:monospace;font-size:12px;color:var(--muted);">${esc(r.no||'—')}</td>
+      <td style="font-weight:600;"><div style="display:flex;align-items:center;">${thumb}<span>${esc(r.name||'')}${isLast?` <span style="font-size:11px;background:#dbeafe;color:var(--primary);padding:1px 6px;border-radius:999px;margin-left:4px;">操作済</span>`:''}</span></div></td>
+      <td>${locCell}</td>
+      <td><span class="qty-cell ${total===0?'zero':''}">${total}</span></td>
+      <td><div class="acts">
+        <button class="btn btn-outline btn-sm" onclick="openStock('${r.k}')">在庫変更</button>
+        <button class="btn btn-outline btn-sm" onclick="openPartHist('${r.k}')">📋 履歴</button>
+        <button class="btn btn-outline btn-sm" onclick="openEdit('${r.k}')">編集</button>
+        <button class="btn btn-sm" style="color:var(--danger);border:1px solid var(--border);background:white;" onclick="delPart('${r.k}','${esc(r.name||'')}')">削除</button>
+      </div></td>
+    </tr>`;
+  }).join('');
+}
+
+
+function openAdd(){
+  id('part-title').textContent='部品を追加'; id('p-key').value=''; id('p-no').value=''; id('p-name').value='';
+  id('loc-label').textContent='各保管場所の初期数量';
+  buildLocInputs({});
+  open_('ov-part');
+}
+function openEdit(key){
+  const p=parts[key]; if(!p)return;
+  id('part-title').textContent='部品を編集'; id('p-key').value=key; id('p-no').value=p.no||''; id('p-name').value=p.name||'';
+  id('loc-label').textContent='※ 在庫数の変更は「在庫変更」ボタンから';
+  buildLocInputs(p.locs||{}, true);
+  open_('ov-part');
+}
+function buildLocInputs(locs,disabled=false){
+  id('loc-inputs').innerHTML=LOCS.map(l=>`<div class="field"><label>${l}</label><input type="number" min="0" value="${locs[l]||0}" id="li-${l}" ${disabled?'disabled style="background:#f8fafc;color:var(--muted);"':''}/></div>`).join('');
+}
+function savePart(){
+  const name=id('p-name').value.trim(); if(!name){toast('部品名は必須です');return;}
+  const key=id('p-key').value;
+  const data={no:id('p-no').value.trim(), name, updatedAt:Date.now()};
+  if(key){
+    db.ref('parts/'+key).update(data);
+    addHist('edit',key,name,'情報を更新');
+    toast('✅ 更新しました');
+  } else {
+    const locs={}; LOCS.forEach(l=>{locs[l]=parseInt(id('li-'+l).value)||0;});
+    data.locs=locs; data.createdAt=Date.now();
+    const ref=db.ref('parts').push(); ref.set(data);
+    addHist('add',ref.key,name,'新規登録 '+LOCS.map(l=>`${l}:${locs[l]}`).join(' '));
+    toast('✅ 追加しました');
+  }
+  closeOv('ov-part');
+}
+function delPart(key,name){
+  if(!confirm(`「${name}」を削除しますか？`))return;
+  addHist('del',key,name,'削除');
+  db.ref('parts/'+key).remove();
+  toast('🗑 削除しました');
+}
+
+function openStock(key){
+  const p=parts[key]; if(!p)return;
+  id('sk-key').value=key; id('stock-title').textContent=p.name; id('sk-qty').value=1;
+  if(curLoc!=='all'){ id('sk-loc').value=curLoc; setSkMode('out'); }
+  else { id('sk-loc').value='シンワ倉庫'; setSkMode('in'); }
+  updateSkPreview(); open_('ov-stock');
+}
+function setSkMode(mode){
+  skMode=mode;
+  const styles={in:['#dcfce7','var(--success)','var(--success)'],out:['white','var(--text)','var(--danger)'],set:['white','var(--text)','var(--primary)']};
+  ['in','out','set'].forEach(m=>{const b=id('sk-btn-'+m);b.style.background=m===mode?styles[m][0]:'white';b.style.color=m===mode?styles[m][1]:'var(--text)';b.style.borderColor=m===mode?styles[m][2]:'var(--border)';});
+  id('sk-qty-label').textContent=mode==='set'?'在庫数（直接指定）':mode==='in'?'入庫数量':'出庫数量';
+  updateSkPreview();
+}
+function updateSkPreview(){
+  const key=id('sk-key').value; if(!key||!parts[key])return;
+  const loc=id('sk-loc').value, cur=(parts[key].locs||{})[loc]||0, qty=parseInt(id('sk-qty').value)||0;
+  const after=skMode==='in'?cur+qty:skMode==='out'?Math.max(0,cur-qty):qty;
+  id('sk-preview').textContent=`${loc}: ${cur} → ${after}`;
+}
+function doStockChange(){
+  if(!currentOperator){ toast('先に作業者を選択してください'); openOperatorModal(); return; }
+  const key=id('sk-key').value; const p=parts[key]; if(!p)return;
+  const loc=id('sk-loc').value, cur=(p.locs||{})[loc]||0, qty=parseInt(id('sk-qty').value)||0;
+  const nv=skMode==='in'?cur+qty:skMode==='out'?Math.max(0,cur-qty):qty;
+  const upd={}; upd[`parts/${key}/locs/${loc}`]=nv; upd[`parts/${key}/updatedAt`]=Date.now();
+  db.ref().update(upd);
+  const label=skMode==='in'?'入庫':skMode==='out'?'出庫':'直接指定';
+  addHist(skMode==='in'?'in':skMode==='out'?'out':'set',key,p.name,`${label} ${loc}: ${cur}→${nv}`);
+  lastOpKey=key;
+  toast(`✅ ${loc}: ${nv}`);
+  closeOv('ov-stock');
+}
+
+function fillTrParts(){
+  const dl=id('tr-part-list');
+  dl.innerHTML=Object.entries(parts).map(([k,p])=>
+    `<option value="${esc(p.no||'')} - ${esc(p.name||'')}" data-key="${k}">`
+  ).join('');
+}
+function searchTrPart(){
+  const q=id('tr-part-input').value.trim().toLowerCase();
+  id('tr-part').value='';
+  id('tr-part-name').textContent='';
+  if(!q){updateTrPreview();return;}
+  const match=Object.entries(parts).find(([k,p])=>
+    (p.no||'').toLowerCase()===q ||
+    (p.no+' - '+p.name).toLowerCase()===q ||
+    (p.name||'').toLowerCase()===q ||
+    (p.no||'').toLowerCase().startsWith(q)
+  );
+  if(match){
+    id('tr-part').value=match[0];
+    id('tr-part-name').textContent=`✅ ${match[1].no||''} ${match[1].name}`;
+  }
+  updateTrPreview();
+}
+function openTransfer(prefillKey){
+  if(prefillKey && parts[prefillKey]){
+    const p=parts[prefillKey];
+    id('tr-part-input').value=`${p.no||''} - ${p.name}`;
+    id('tr-part').value=prefillKey;
+    id('tr-part-name').textContent=`✅ ${p.no||''} ${p.name}`;
+  } else {
+    id('tr-part-input').value='';
+    id('tr-part').value='';
+    id('tr-part-name').textContent='';
+  }
+  id('tr-qty').value=1;
+  if(curLoc!=='all'){
+    id('tr-from').value='シンワ倉庫';
+    id('tr-to').value=curLoc;
+  } else {
+    id('tr-from').value='シンワ倉庫';
+    id('tr-to').value='';
+  }
+  id('tr-preview').textContent='部品・移動元・移動先を選択してください';
+  open_('ov-transfer');
+}
+function updateTrPreview(){
+  const key=id('tr-part').value, from=id('tr-from').value, to=id('tr-to').value, qty=parseInt(id('tr-qty').value)||0;
+  if(!key||!from||!to){id('tr-preview').textContent='部品・移動元・移動先を選択してください';return;}
+  const p=parts[key], fq=(p.locs||{})[from]||0, tq=(p.locs||{})[to]||0;
+  id('tr-preview').textContent=`${from}: ${fq}→${Math.max(0,fq-qty)}　${to}: ${tq}→${tq+qty}`;
+}
+function doTransfer(){
+  if(!currentOperator){ toast('先に作業者を選択してください'); openOperatorModal(); return; }
+  const key=id('tr-part').value, from=id('tr-from').value, to=id('tr-to').value, qty=parseInt(id('tr-qty').value)||0;
+  if(!key||!from||!to){toast('部品・移動元・移動先を選択してください');return;}
+  if(from===to){toast('移動元と移動先が同じです');return;}
+  if(qty<=0){toast('数量を入力してください');return;}
+  const p=parts[key], fq=(p.locs||{})[from]||0;
+  if(qty>fq){toast(`${from}の在庫が不足（現在: ${fq}）`);return;}
+  const tq=(p.locs||{})[to]||0;
+  const upd={}; upd[`parts/${key}/locs/${from}`]=fq-qty; upd[`parts/${key}/locs/${to}`]=tq+qty; upd[`parts/${key}/updatedAt`]=Date.now();
+  db.ref().update(upd);
+  addHist('move',key,p.name,`${from}→${to} ${qty}個移動`);
+  lastOpKey=key;
+  toast(`✅ ${from}→${to} ${qty}個`);
+  closeOv('ov-transfer');
+}
+
+function openPartHist(key){
+  const p=parts[key]; if(!p)return;
+  openPartKey=key;
+  id('phist-title').textContent=`📋 ${p.name} の変更履歴`;
+  open_('ov-phist');
+  renderPartHistModal();
+}
+function renderPartHistModal(){
+  const items=hist.filter(h=>h.partKey===openPartKey||h.key===openPartKey).slice(0,10);
+  if(!items.length){
+    id('phist-body').innerHTML=`<div style="text-align:center;padding:24px;color:var(--muted);">履歴はまだありません<br><small>全履歴件数: ${hist.length}</small></div>`;
+    return;
+  }
+  id('phist-body').innerHTML=items.map(h=>`
+    <div class="part-hist-item hi-${h.type}">
+      <div class="phi-top">
+        <span class="phi-type type-${h.type||'edit'}">${TYPE_LABELS[h.type]||h.type}</span>
+        <span style="color:var(--muted);font-size:12px;">${fmtDate(h.ts)}</span>
+      </div>
+      <div class="phi-detail">${esc(h.detail||'')}${h.operator?` · 👤${esc(h.operator)}`:''}</div>
+    </div>`).join('');
+}
+
+function addHist(type,key,name,detail){
+  db.ref('history').push({type, partKey:key, name, detail, ts:Date.now(), operator: currentOperator||null});
+}
+function renderHist(){
+  const list=id('hist-list');
+  if(!hist.length){list.innerHTML='<div style="text-align:center;padding:24px;color:var(--muted);font-size:13px;">履歴はまだありません</div>';return;}
+  list.innerHTML=hist.map(h=>{
+    const p=h.partKey?parts[h.partKey]:null;
+    const no=p?p.no:(h.no||'');
+    const nameStr=`${esc(h.name||'')}${no?` <span style="font-size:10px;color:var(--muted);font-family:monospace;">[${esc(no)}]</span>`:''}`;
+    return `<div class="hi hi-${h.type}"><div class="hi-top"><span class="hi-name">${nameStr}</span><span class="hi-time">${fmtDate(h.ts)}</span></div><div class="hi-detail">[${TYPE_LABELS[h.type]||h.type}] ${esc(h.detail||'')}${h.operator?` · 👤${esc(h.operator)}`:''}</div></div>`;
+  }).join('');
+}
+function toggleHist(){ id('hist-panel').classList.toggle('open'); }
+
+let csvImportData = null;
+
+function handleCSVImport(e){
+  const file = e.target.files[0]; if(!file) return;
+  toast('📂 CSVを読み込み中...');
+  const reader = new FileReader();
+  reader.onerror = function(){ toast('ファイルの読み込みに失敗しました'); };
+  reader.onload = function(ev){
+    try {
+      let text = ev.target.result;
+      if(text.charCodeAt(0)===0xFEFF) text=text.slice(1);
+      csvImportData = parseImportCSV(text);
+      if(!csvImportData || Object.keys(csvImportData).length===0){
+        toast('CSVの解析に失敗しました（列が見つかりません）');
+        return;
+      }
+      const count = Object.keys(csvImportData).length;
+      id('csv-preview').innerHTML = `
+        <strong>インポート内容：</strong><br>
+        部品種類: <strong>${count} 種</strong><br>
+        対象保管場所: シンワ倉庫・アラン・ゆーや・しゅん・たくや<br><br>
+        <strong>サンプル（最初の3件）：</strong><br>
+        ${Object.values(csvImportData).slice(0,3).map(p=>
+          `[${p.no}] ${p.name} / 合計:${LOCS.reduce((s,l)=>s+(p.locs[l]||0),0)}`
+        ).join('<br>')}
+      `;
+      open_('ov-csv');
+    } catch(err) {
+      toast('エラー: ' + err.message);
+    }
+  };
+  reader.readAsText(file, 'UTF-8');
+  e.target.value = '';
+}
+
+function parseImportCSV(text){
+  const lines = text.split(/\r?\n/).filter(l=>l.trim());
+  if(lines.length < 2) return null;
+
+  const headers = lines[0].split(',').map(h=>h.trim().replace(/^"|"$/g,''));
+  const nameIdx = headers.findIndex(h=>h.includes('物品名'));
+  const locIdx  = headers.findIndex(h=>h.includes('保管場所'));
+  const qtyIdx  = headers.findIndex(h=>h==='数量'||h.includes('数量'));
+  const noIdx   = headers.findLastIndex(h=>h.includes('部品番号'));
+
+  if(nameIdx<0||locIdx<0||qtyIdx<0) return null;
+
+  const map = {};
+  for(let i=1;i<lines.length;i++){
+    const cols = lines[i].split(',');
+    if(cols.length < Math.max(nameIdx,locIdx,qtyIdx)+1) continue;
+    const name = cols[nameIdx].trim().replace(/^"|"$/g,'');
+    const loc  = cols[locIdx].trim().replace(/^"|"$/g,'');
+    const qty  = parseInt(cols[qtyIdx])||0;
+    const no   = noIdx>=0 ? cols[noIdx].trim().replace(/^"|"$/g,'') : '';
+    if(!name || !LOCS.includes(loc)) continue;
+
+    const key = no || name;
+    if(!map[key]){
+      map[key] = { no, name, locs:{シンワ倉庫:0,アラン:0,ゆーや:0,しゅん:0,たくや:0}, updatedAt:Date.now(), createdAt:Date.now() };
+    }
+    map[key].locs[loc] = qty;
+  }
+  return map;
+}
+
+async function doCSVImport(){
+  if(!csvImportData){ toast('データがありません'); return; }
+  id('csv-import-btn').disabled=true;
+  id('csv-import-btn').textContent='インポート中...';
+
+  const entries = Object.values(csvImportData);
+  let done=0;
+
+  const existingMap={};
+  Object.entries(parts).forEach(([k,p])=>{
+    if(p.no) existingMap[p.no]=k;
+    existingMap[p.name]=k;
+  });
+
+  for(const p of entries){
+    const existKey = existingMap[p.no]||existingMap[p.name];
+    if(existKey){
+      await db.ref('parts/'+existKey).update({locs:p.locs, updatedAt:Date.now()});
+    } else {
+      await db.ref('parts').push(p);
+    }
+    done++;
+    if(done%50===0) id('csv-import-btn').textContent=`インポート中... ${done}/${entries.length}`;
+  }
+
+  addHist('add','import','CSVインポート',`${entries.length}件インポート完了`);
+  toast(`✅ ${entries.length}件インポートしました`);
+  id('csv-import-btn').disabled=false;
+  id('csv-import-btn').textContent='インポート実行';
+  closeOv('ov-csv');
+  csvImportData=null;
+}
+
+function getExportRows(){
+  return Object.values(parts).map(p=>{
+    const locs=p.locs||{}, total=LOCS.reduce((s,l)=>s+(locs[l]||0),0);
+    const row={'部品番号':p.no||'','部品名':p.name||''};
+    LOCS.forEach(l=>{row[l]=locs[l]||0;}); row['合計']=total; row['最終更新']=fmtDate(p.updatedAt);
+    return row;
+  });
+}
+function exportCSV(){
+  const rows=getExportRows(); if(!rows.length){toast('データがありません');return;}
+  const headers=Object.keys(rows[0]);
+  const csv=[headers.join(','),...rows.map(r=>headers.map(h=>{const v=String(r[h]??'');return v.includes(',')?`"${v}"`:v;}).join(','))].join('\n');
+  dl(new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8;'}),`部品在庫_${today()}.csv`);
+  toast('📄 CSVをダウンロードしました');
+}
+function exportExcel(){
+  const rows=getExportRows(); if(!rows.length){toast('データがありません');return;}
+  const ws=XLSX.utils.json_to_sheet(rows); ws['!cols']=[10,20,10,10,10,10,10,10,16].map(w=>({wch:w}));
+  const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'部品在庫');
+  if(hist.length){
+    const hd=hist.slice(0,500).map(h=>({'日時':fmtDate(h.ts),'操作':TYPE_LABELS[h.type]||h.type,'部品名':h.name||'','詳細':h.detail||''}));
+    const wsH=XLSX.utils.json_to_sheet(hd); wsH['!cols']=[16,8,20,30].map(w=>({wch:w}));
+    XLSX.utils.book_append_sheet(wb,wsH,'操作履歴');
+  }
+  XLSX.writeFile(wb,`部品在庫_${today()}.xlsx`);
+  toast('📊 Excelをダウンロードしました');
+}
+
+let scanImageBase64 = null, scanImageMime = null, scanParsedItems = [];
+
+function openScan(){
+  scanImageBase64=null; scanImageMime=null; scanParsedItems=[];
+  id('scan-analyze-area').style.display='none';
+  id('scan-results').innerHTML='';
+  id('scan-confirm-btn').style.display='none';
+  id('scan-img-preview').style.display='none';
+  id('scan-file').value='';
+  open_('ov-scan');
+}
+
+function onScanFileSelect(e){
+  const file=e.target.files[0]; if(!file) return;
+  scanImageMime=file.type||'image/jpeg';
+  const reader=new FileReader();
+  reader.onload=function(ev){
+    scanImageBase64=ev.target.result.split(',')[1];
+    id('scan-img-el').src=ev.target.result;
+    id('scan-img-preview').style.display='block';
+    id('scan-analyze-area').style.display='block';
+    id('scan-results').innerHTML='';
+    id('scan-confirm-btn').style.display='none';
+  };
+  reader.readAsDataURL(file);
+}
+
+async function doScanAnalyze(){
+  const apiKey=localStorage.getItem('anthropic_key');
+  if(!apiKey){ toast('APIキーが設定されていません。設定画面から再接続してください。'); return; }
+  if(!scanImageBase64){ toast('画像を選択してください'); return; }
+
+  const btn=id('scan-analyze-btn');
+  btn.disabled=true; btn.textContent='🤖 解析中...';
+  id('scan-results').innerHTML='<div style="text-align:center;padding:16px;color:var(--muted);">AIが納品書を読み取っています...</div>';
+
+  try {
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{
+        'x-api-key':apiKey,
+        'anthropic-version':'2023-06-01',
+        'content-type':'application/json',
+        'anthropic-dangerous-direct-browser-access':'true'
+      },
+      body:JSON.stringify({
+        model:'claude-haiku-4-5',
+        max_tokens:1024,
+        messages:[{
+          role:'user',
+          content:[
+            {type:'image',source:{type:'base64',media_type:scanImageMime,data:scanImageBase64}},
+            {type:'text',text:'この納品明細書から商品コード（部品番号）と数量を全て抽出してください。JSONのみ返してください（説明文不要）。形式: [{"code":"商品コード","qty":数量}]'}
+          ]
+        }]
+      })
+    });
+    if(!res.ok){const e=await res.json();throw new Error(e.error?.message||'API Error');}
+    const data=await res.json();
+    const text=data.content[0].text;
+    const match=text.match(/\[[\s\S]*?\]/);
+    if(!match) throw new Error('解析結果が読み取れませんでした');
+    scanParsedItems=JSON.parse(match[0]);
+    renderScanResults();
+  } catch(e){
+    id('scan-results').innerHTML=`<div style="color:var(--danger);padding:12px;background:#fef2f2;border-radius:8px;">エラー: ${esc(e.message)}</div>`;
+  }
+  btn.disabled=false; btn.textContent='🤖 AIで解析する';
+}
+
+function renderScanResults(){
+  if(!scanParsedItems.length){
+    id('scan-results').innerHTML='<div style="text-align:center;padding:16px;color:var(--muted);">部品が検出されませんでした</div>';
+    return;
+  }
+  const partsByNo={};
+  Object.entries(parts).forEach(([k,p])=>{ if(p.no) partsByNo[String(p.no).trim()]=k; });
+
+  let html='<div style="font-size:13px;font-weight:700;color:var(--muted);margin-bottom:8px;">検出された部品（チェックしたものを入庫）</div>';
+  scanParsedItems=scanParsedItems.map((item,i)=>{
+    const matchKey=partsByNo[String(item.code).trim()];
+    const matchPart=matchKey?parts[matchKey]:null;
+    item._key=matchKey||null;
+    item._checked=!!matchKey;
+    html+=`<div class="scan-result-item ${matchKey?'matched':'unmatched'}" id="sri-${i}">
+      <input type="checkbox" id="sri-chk-${i}" ${matchKey?'checked':''} onchange="scanParsedItems[${i}]._checked=this.checked">
+      <div class="sri-name">
+        <span style="font-family:monospace;font-size:12px;">${esc(item.code)}</span>
+        <span class="scan-badge ${matchKey?'ok':'ng'}">${matchKey?'✓ 一致':'✗ 未登録'}</span>
+        ${matchPart?`<div style="font-size:11px;color:var(--muted);">${esc(matchPart.name)}</div>`:''}
+      </div>
+      <div class="sri-qty">+${item.qty}</div>
+    </div>`;
+    return item;
+  });
+  id('scan-results').innerHTML=html;
+  id('scan-confirm-btn').style.display='inline-block';
+}
+
+async function doScanImport(){
+  const targets=scanParsedItems.filter(item=>item._checked&&item._key);
+  if(!targets.length){ toast('入庫対象がありません（一致する部品にチェックが必要です）'); return; }
+
+  const btn=id('scan-confirm-btn');
+  btn.disabled=true; btn.textContent='入庫中...';
+
+  for(const item of targets){
+    const p=parts[item._key]; if(!p) continue;
+    const cur=(p.locs||{})['シンワ倉庫']||0;
+    const nv=cur+item.qty;
+    const upd={};
+    upd[`parts/${item._key}/locs/シンワ倉庫`]=nv;
+    upd[`parts/${item._key}/updatedAt`]=Date.now();
+    await db.ref().update(upd);
+    addHist('in',item._key,p.name,`入庫（納品書スキャン）シンワ倉庫: ${cur}→${nv}`);
+    lastOpKey=item._key;
+  }
+
+  toast(`✅ ${targets.length}件をシンワ倉庫へ入庫しました`);
+  btn.disabled=false; btn.textContent='✅ シンワ倉庫へ入庫';
+  closeOv('ov-scan');
+}
+
+function openPhotoModal(key){
+  const p=parts[key]; if(!p) return;
+  photoPartKey=key;
+  id('photo-title').textContent=p.name;
+  id('photo-status').textContent='';
+  id('photo-camera').value='';
+  id('photo-gallery').value='';
+  id('photo-upload-area').style.display=supabaseUrl?'block':'none';
+  if(!supabaseUrl) id('photo-grid').innerHTML=`<div style="color:var(--muted);font-size:13px;">Supabase未設定のため写真機能は利用できません。<br>設定画面からSupabase URLとAnon Keyを入力してください。</div>`;
+  else renderPhotoGrid(key);
+  open_('ov-photo');
+}
+
+function renderPhotoGrid(key){
+  const photos=(parts[key]||{}).photos||[];
+  const grid=id('photo-grid');
+  if(!photos.length){ grid.innerHTML=`<div style="color:var(--muted);font-size:13px;padding:4px;">写真はまだありません</div>`; return; }
+  grid.innerHTML=photos.map((url,i)=>`
+    <div style="position:relative;">
+      <img src="${url}" onclick="showLightbox('${url}')"
+        style="width:88px;height:88px;object-fit:cover;border-radius:8px;cursor:pointer;border:1px solid var(--border);" />
+      <button onclick="deletePhoto('${key}',${i})"
+        style="position:absolute;top:3px;right:3px;width:22px;height:22px;border-radius:50%;background:rgba(220,38,38,0.85);color:white;border:none;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>
+    </div>`).join('');
+}
+
+async function compressImage(file){
+  return new Promise(resolve=>{
+    const img=new Image();
+    const objUrl=URL.createObjectURL(file);
+    img.onload=()=>{
+      URL.revokeObjectURL(objUrl);
+      const MAX=800;
+      let w=img.naturalWidth, h=img.naturalHeight;
+      if(w>h){ if(w>MAX){h=Math.round(h*MAX/w);w=MAX;} }
+      else { if(h>MAX){w=Math.round(w*MAX/h);h=MAX;} }
+      const canvas=document.createElement('canvas');
+      canvas.width=w; canvas.height=h;
+      canvas.getContext('2d').drawImage(img,0,0,w,h);
+      canvas.toBlob(b=>resolve(b),'image/jpeg',0.5);
+    };
+    img.src=objUrl;
+  });
+}
+
+async function handlePhotoFile(e){
+  const file=e.target.files[0]; if(!file) return;
+  if(!supabaseUrl){ toast('Supabaseが設定されていません'); return; }
+  const status=id('photo-status');
+  status.textContent='圧縮中...';
+  try{
+    const blob=await compressImage(file);
+    const kb=Math.round(blob.size/1024);
+    status.textContent=`アップロード中... (${kb}KB)`;
+    const path=`${photoPartKey}/${Date.now()}.jpg`;
+    const res=await fetch(`${supabaseUrl}/storage/v1/object/${PHOTO_BUCKET}/${path}`,{
+      method:'POST',
+      headers:{'Authorization':`Bearer ${supabaseKey}`,'Content-Type':'image/jpeg'},
+      body:blob
+    });
+    if(!res.ok){ const er=await res.json(); throw new Error(er.error||er.message||'アップロード失敗'); }
+    const url=`${supabaseUrl}/storage/v1/object/public/${PHOTO_BUCKET}/${path}`;
+    const photos=[...((parts[photoPartKey]||{}).photos||[]),url];
+    await db.ref(`parts/${photoPartKey}`).update({photos,updatedAt:Date.now()});
+    toast('✅ 写真をアップロードしました');
+    status.textContent='';
+    e.target.value='';
+    renderPhotoGrid(photoPartKey);
+  }catch(err){
+    status.textContent='❌ '+err.message;
+    toast('❌ '+err.message);
+  }
+}
+
+async function deletePhoto(key,idx){
+  if(!confirm('この写真を削除しますか？')) return;
+  const photos=[...((parts[key]||{}).photos||[])];
+  photos.splice(idx,1);
+  await db.ref(`parts/${key}`).update({photos,updatedAt:Date.now()});
+  renderPhotoGrid(key);
+  toast('🗑 写真を削除しました');
+}
+
+function showLightbox(url){ id('lightbox-img').src=url; id('lightbox').classList.add('open'); }
+function closeLightbox(){ id('lightbox').classList.remove('open'); id('lightbox-img').src=''; }
+
+let qrStream=null, qrScanning=false;
+// BarcodeDetector: iOS17+/Chrome対応（QRコードも1Dバーコードも読める）
+let barcodeDetector=null;
+if('BarcodeDetector' in window){
+  try{ barcodeDetector=new BarcodeDetector({formats:['qr_code','ean_13','ean_8','code_128','code_39','upc_a','upc_e','data_matrix','itf']}); }catch(_){}
+}
+const qrCanvas=document.createElement('canvas');
+const qrCtx=qrCanvas.getContext('2d',{willReadFrequently:true});
+
+function openQR(){
+  id('qr-result').innerHTML='';
+  id('qr-manual').value='';
+  open_('ov-qr');
+}
+function onQRPhotoSelect(e){
+  const file=e.target.files[0]; if(!file) return;
+  id('qr-result').innerHTML=`<div style="padding:12px;color:var(--muted);font-size:13px;">解析中...</div>`;
+  const img=new Image();
+  const objUrl=URL.createObjectURL(file);
+  img.onload=()=>{
+    URL.revokeObjectURL(objUrl);
+    const code=findQRInImage(img);
+    if(code){
+      lookupQR(code);
+    } else {
+      id('qr-result').innerHTML=`<div style="padding:12px;background:#fef2f2;border-radius:8px;color:var(--danger);font-size:13px;">写真からQRコードを読み取れませんでした。QRコード部分だけが大きく写るように、もっと近づいて撮り直してみてください。反射や汚れがあると読み取りにくくなります。</div>`;
+    }
+  };
+  img.src=objUrl;
+  e.target.value='';
+}
+
+function findQRInImage(img){
+  const iw=img.naturalWidth, ih=img.naturalHeight;
+  // 1) まず画像全体で試す
+  let code=decodeQRFromCrop(img,0,0,iw,ih);
+  if(code) return code;
+  // 2) 中心を基準に、だんだん狭い範囲を切り出して拡大しながら試す（QRが小さく写っている場合の対策）
+  const ratios=[0.7,0.5,0.35,0.25,0.18];
+  const cx=iw/2, cy=ih/2;
+  for(const r of ratios){
+    const cw=iw*r, ch=ih*r;
+    code=decodeQRFromCrop(img,cx-cw/2,cy-ch/2,cw,ch);
+    if(code) return code;
+  }
+  return null;
+}
+function decodeQRFromCrop(img,sx,sy,sw,sh){
+  const target=900;
+  const scale=Math.max(1,target/Math.min(sw,sh));
+  const outW=Math.round(sw*scale), outH=Math.round(sh*scale);
+  const c=document.createElement('canvas');
+  c.width=outW; c.height=outH;
+  const cx=c.getContext('2d',{willReadFrequently:true});
+  cx.drawImage(img,sx,sy,sw,sh,0,0,outW,outH);
+  const data=cx.getImageData(0,0,outW,outH);
+  const result=window.jsQR?jsQR(data.data,data.width,data.height):null;
+  return result?result.data:null;
+}
+async function startQRScan(){
+  try{
+    qrStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:1280},height:{ideal:720}}});
+    const v=id('qr-video');
+    v.srcObject=qrStream;
+    v.style.display='block';
+    id('qr-idle').style.display='none';
+    id('qr-cam-btn').style.display='none';
+    id('qr-stop-btn').style.display='inline-block';
+    qrScanning=true;
+    // iOS Safariはplay()を明示的に呼ばないと再生されない
+    try{ await v.play(); }catch(_){}
+    setTimeout(qrTick, 300); // 少し待ってから開始（映像が安定するまで）
+  }catch(e){
+    toast('カメラを利用できません: ' + (e.message||e));
+  }
+}
+function stopQRScan(){
+  qrScanning=false;
+  if(qrStream){ qrStream.getTracks().forEach(t=>t.stop()); qrStream=null; }
+  const v=id('qr-video'); v.srcObject=null; v.style.display='none';
+  id('qr-idle').style.display='block';
+  id('qr-cam-btn').style.display='inline-block';
+  id('qr-stop-btn').style.display='none';
+}
+async function qrTick(){
+  if(!qrScanning) return;
+  const v=id('qr-video');
+  if(v.readyState>=2 && v.videoWidth>0 && v.videoHeight>0){
+    let decoded=null;
+    // 1) BarcodeDetector（iOS17+/Chrome）: QR・バーコード両対応
+    if(barcodeDetector){
+      try{
+        const codes=await barcodeDetector.detect(v);
+        if(codes.length>0) decoded=codes[0].rawValue;
+      }catch(_){}
+    }
+    // 2) フォールバック: jsQR（QRコードのみ）
+    if(!decoded && window.jsQR){
+      qrCanvas.width=v.videoWidth; qrCanvas.height=v.videoHeight;
+      qrCtx.drawImage(v,0,0,qrCanvas.width,qrCanvas.height);
+      const img=qrCtx.getImageData(0,0,qrCanvas.width,qrCanvas.height);
+      const code=jsQR(img.data,img.width,img.height);
+      if(code) decoded=code.data;
+    }
+    if(decoded){
+      stopQRScan();
+      id('qr-manual').value=decoded;
+      id('qr-result').innerHTML=`<div style="padding:6px 10px;background:#f0fdf4;border-radius:6px;font-size:12px;color:#166534;margin-bottom:6px;">✅ 読み取り: ${esc(decoded)}</div>`;
+      lookupQR(decoded); return;
+    }
+  }
+  if(qrScanning) setTimeout(qrTick, 150);
+}
+function lookupQR(value){
+  const v=(value||'').trim(); if(!v) return;
+  const vl=v.toLowerCase();
+  // まず完全一致、次に部品番号の部分一致、最後に部品名の部分一致
+  let match=Object.entries(parts).find(([k,p])=>String(p.no||'').trim()===v);
+  if(!match) match=Object.entries(parts).find(([k,p])=>String(p.no||'').toLowerCase().includes(vl));
+  if(!match) match=Object.entries(parts).find(([k,p])=>(p.name||'').toLowerCase().includes(vl));
+  if(!match){
+    id('qr-result').innerHTML=`<div style="padding:12px;background:#fef2f2;border-radius:8px;color:var(--danger);font-size:13px;">「${esc(v)}」に一致する部品が見つかりません<br><span style="font-size:11px;color:var(--muted);">部品番号または部品名で検索します</span></div>`;
+    return;
+  }
+  const [key,p]=match;
+  const locs=p.locs||{};
+  id('qr-result').innerHTML=`
+    <div style="border:1px solid var(--border);border-radius:10px;padding:14px;">
+      <div style="font-weight:700;margin-bottom:2px;">${esc(p.name)}</div>
+      <div style="font-family:monospace;font-size:12px;color:var(--muted);margin-bottom:10px;">${esc(p.no||'')}</div>
+      <div class="loc-chips" style="margin-bottom:12px;">${LOCS.map(l=>`<span class="loc-chip ${(locs[l]||0)>0?'has':''}">${l}: ${locs[l]||0}</span>`).join('')}</div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-success" style="flex:1;" onclick="closeOv('ov-qr');openStock('${key}')">在庫を変更</button>
+        <button class="btn btn-warning" style="flex:1;" onclick="closeOv('ov-qr');openTransfer('${key}')">移動する</button>
+      </div>
+    </div>`;
+}
+
+function id(x){return document.getElementById(x);}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function fmtDate(ts){if(!ts)return'—';const d=new Date(ts);return d.toLocaleString('ja-JP',{timeZone:'Asia/Tokyo',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});}
+function today(){const d=new Date();return`${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;}
+function open_(ovId){id(ovId).classList.add('open');}
+function closeOv(ovId,e){
+  if(!e||e.target===id(ovId)){
+    id(ovId).classList.remove('open');
+    if(ovId==='ov-phist') openPartKey=null;
+  }
+}
+function dl(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();document.body.removeChild(a);}
+function showErr(msg){const e=id('setup-err');e.textContent=msg;e.style.display='block';}
+let _tt;
+function toast(msg){const t=id('toast');t.textContent=msg;t.classList.add('show');clearTimeout(_tt);_tt=setTimeout(()=>t.classList.remove('show'),2500);}
+</script>
+</body>
+</html>
