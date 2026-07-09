@@ -412,8 +412,8 @@ tr:hover td { background: #f8fafc; }
       <button class="btn btn-primary" style="flex:1;" id="qr-cam-btn" onclick="startQRScan()">カメラを起動</button>
       <button class="btn btn-outline" id="qr-stop-btn" style="display:none;" onclick="stopQRScan()">停止</button>
     </div>
-    <label class="btn btn-success" style="display:block;text-align:center;cursor:pointer;margin-bottom:10px;" for="qr-photo-input">📷 写真で読み取る</label>
-    <input type="file" id="qr-photo-input" accept="image/*" capture="environment" style="display:none" onchange="onQRPhotoSelect(event)" />
+    <button class="btn btn-success" style="display:block;width:100%;margin-bottom:10px;" onclick="id('qr-photo-input').click()">📷 写真で読み取る</button>
+    <input type="file" id="qr-photo-input" accept="image/*" capture="environment" style="position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;" onchange="onQRPhotoSelect(event)" />
     <div class="field"><label>部品番号・部品名を直接入力</label>
       <input type="text" id="qr-manual" placeholder="例: 27313 またはフィルター" onkeydown="if(event.key==='Enter'){lookupQR(this.value);}" style="font-size:16px;" />
     </div>
@@ -1131,37 +1131,43 @@ function onQRPhotoSelect(e){
   }
 }
 
+function drawFiltered(src,w,h,filter){
+  const c=document.createElement('canvas'); c.width=w; c.height=h;
+  const ctx=c.getContext('2d',{willReadFrequently:true});
+  ctx.filter=filter; ctx.drawImage(src,0,0,w,h); ctx.filter='none';
+  return c;
+}
+function tryJsQR(canvas,w,h){
+  if(!window.jsQR) return null;
+  const d=canvas.getContext('2d',{willReadFrequently:true}).getImageData(0,0,w,h);
+  const r=jsQR(d.data,w,h,{inversionAttempts:'attemptBoth'});
+  return r?r.data:null;
+}
 function findQRInImage(img){
   const iw=img.naturalWidth, ih=img.naturalHeight;
-  // iPhoneの高解像度写真（12MP）はiOS SafariのCanvasメモリ制限に引っかかるため
-  // まず最大1200pxにダウンスケールしてから処理する
-  const MAX=1200;
+  // 最大1000pxにダウンスケール（iOS Safariのcanvasメモリ制限対策）
+  const MAX=1000;
   const s=Math.min(1, MAX/Math.max(iw,ih));
   const bw=Math.round(iw*s), bh=Math.round(ih*s);
-  const base=document.createElement('canvas');
-  base.width=bw; base.height=bh;
-  const bCtx=base.getContext('2d',{willReadFrequently:true});
-  bCtx.drawImage(img,0,0,bw,bh);
 
-  // 1) ダウンスケール済み全体で試す
-  let d=bCtx.getImageData(0,0,bw,bh);
-  let result=window.jsQR?jsQR(d.data,bw,bh):null;
-  if(result) return result.data;
-
-  // 2) 中心クロップを拡大しながら試す
-  const ratios=[0.75,0.55,0.4,0.28];
-  const cx=bw/2, cy=bh/2;
-  for(const r of ratios){
-    const cw=Math.round(bw*r), ch=Math.round(bh*r);
-    const sc=Math.max(1, 900/Math.min(cw,ch));
-    const ow=Math.round(cw*sc), oh=Math.round(ch*sc);
-    const c2=document.createElement('canvas');
-    c2.width=ow; c2.height=oh;
-    const c2Ctx=c2.getContext('2d',{willReadFrequently:true});
-    c2Ctx.drawImage(base,cx-cw/2,cy-ch/2,cw,ch,0,0,ow,oh);
-    d=c2Ctx.getImageData(0,0,ow,oh);
-    result=window.jsQR?jsQR(d.data,ow,oh):null;
-    if(result) return result.data;
+  // フィルター別に試す: 通常・コントラスト強調・反転
+  const filters=['none','contrast(200%) brightness(120%)','invert(1)','contrast(300%)'];
+  for(const f of filters){
+    const base=document.createElement('canvas'); base.width=bw; base.height=bh;
+    const bCtx=base.getContext('2d',{willReadFrequently:true});
+    bCtx.filter=f; bCtx.drawImage(img,0,0,bw,bh); bCtx.filter='none';
+    // 全体
+    let r=tryJsQR(base,bw,bh); if(r) return r;
+    // 中心クロップ
+    const cx=bw/2, cy=bh/2;
+    for(const ratio of [0.75,0.55,0.4]){
+      const cw=Math.round(bw*ratio), ch=Math.round(bh*ratio);
+      const sc=Math.max(1,800/Math.min(cw,ch));
+      const ow=Math.round(cw*sc), oh=Math.round(ch*sc);
+      const c2=document.createElement('canvas'); c2.width=ow; c2.height=oh;
+      c2.getContext('2d',{willReadFrequently:true}).drawImage(base,cx-cw/2,cy-ch/2,cw,ch,0,0,ow,oh);
+      r=tryJsQR(c2,ow,oh); if(r) return r;
+    }
   }
   return null;
 }
