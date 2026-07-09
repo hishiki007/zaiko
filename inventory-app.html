@@ -404,7 +404,7 @@ tr:hover td { background: #f8fafc; }
     <h3>📱 バーコード / QRスキャン</h3>
     <!-- 結果を上部に表示（スクロール不要） -->
     <div id="qr-result" style="margin-bottom:10px;min-height:20px;"></div>
-    <div id="qr-viewport" style="position:relative;width:100%;aspect-ratio:4/3;background:#0f172a;border-radius:10px;overflow:hidden;display:flex;align-items:center;justify-content:center;margin-bottom:10px;">
+    <div id="qr-viewport" style="position:relative;width:100%;height:200px;background:#0f172a;border-radius:10px;overflow:hidden;display:flex;align-items:center;justify-content:center;margin-bottom:10px;">
       <video id="qr-video" autoplay playsinline muted style="width:100%;height:100%;object-fit:cover;display:none;"></video>
       <div id="qr-idle" style="color:#94a3b8;font-size:13px;text-align:center;padding:0 24px;">カメラを起動してバーコードまたはQRコードを写してください</div>
     </div>
@@ -1196,18 +1196,20 @@ async function qrTick(){
   if(qrScanning) setTimeout(qrTick, 150);
 }
 function lookupQR(value){
-  const v=(value||'').trim(); if(!v) return;
+  const v=(value||'').trim();
+  if(!v){ toast('部品番号または部品名を入力してください'); return; }
   const vl=v.toLowerCase();
-  // まず完全一致、次に部品番号の部分一致、最後に部品名の部分一致
   let match=Object.entries(parts).find(([k,p])=>String(p.no||'').trim()===v);
   if(!match) match=Object.entries(parts).find(([k,p])=>String(p.no||'').toLowerCase().includes(vl));
   if(!match) match=Object.entries(parts).find(([k,p])=>(p.name||'').toLowerCase().includes(vl));
   if(!match){
-    id('qr-result').innerHTML=`<div style="padding:12px;background:#fef2f2;border-radius:8px;color:var(--danger);font-size:13px;">「${esc(v)}」に一致する部品が見つかりません<br><span style="font-size:11px;color:var(--muted);">部品番号または部品名で検索します</span></div>`;
+    toast('「'+v+'」 見つかりません');
+    id('qr-result').innerHTML=`<div style="padding:12px;background:#fef2f2;border-radius:8px;color:var(--danger);font-size:13px;">「${esc(v)}」に一致する部品が見つかりません</div>`;
     return;
   }
   const [key,p]=match;
   const locs=p.locs||{};
+  toast('✅ '+p.name);
   id('qr-result').innerHTML=`
     <div style="border:1px solid var(--border);border-radius:10px;padding:14px;">
       <div style="font-weight:700;margin-bottom:2px;">${esc(p.name)}</div>
@@ -1218,6 +1220,7 @@ function lookupQR(value){
         <button class="btn btn-warning" style="flex:1;" onclick="closeOv('ov-qr');openTransfer('${key}')">移動する</button>
       </div>
     </div>`;
+  id('qr-result').scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 
 function id(x){return document.getElementById(x);}
