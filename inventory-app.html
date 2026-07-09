@@ -1137,21 +1137,25 @@ function decodeQRFromCrop(img,sx,sy,sw,sh){
 }
 async function startQRScan(){
   try{
-    qrStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:1920},height:{ideal:1080}}});
-    const v=id('qr-video'); v.srcObject=qrStream; v.style.display='block';
+    qrStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:1280},height:{ideal:720}}});
+    const v=id('qr-video');
+    v.srcObject=qrStream;
+    v.style.display='block';
     id('qr-idle').style.display='none';
     id('qr-cam-btn').style.display='none';
     id('qr-stop-btn').style.display='inline-block';
     qrScanning=true;
+    // iOS Safariはplay()を明示的に呼ばないと再生されない
+    try{ await v.play(); }catch(_){}
     requestAnimationFrame(qrTick);
   }catch(e){
-    toast('カメラを利用できません。番号を直接入力してください');
+    toast('カメラを利用できません: ' + (e.message||e));
   }
 }
 function stopQRScan(){
   qrScanning=false;
-  if(qrStream) qrStream.getTracks().forEach(t=>t.stop());
-  const v=id('qr-video'); v.style.display='none';
+  if(qrStream){ qrStream.getTracks().forEach(t=>t.stop()); qrStream=null; }
+  const v=id('qr-video'); v.srcObject=null; v.style.display='none';
   id('qr-idle').style.display='block';
   id('qr-cam-btn').style.display='inline-block';
   id('qr-stop-btn').style.display='none';
@@ -1159,12 +1163,13 @@ function stopQRScan(){
 function qrTick(){
   if(!qrScanning) return;
   const v=id('qr-video');
-  if(v.readyState===v.HAVE_ENOUGH_DATA){
+  // readyState>=2かつ映像サイズが有効な場合にスキャン（iOSはHAVE_ENOUGH_DATA=4に達しないことがある）
+  if(v.readyState>=2 && v.videoWidth>0 && v.videoHeight>0){
     qrCanvas.width=v.videoWidth; qrCanvas.height=v.videoHeight;
     qrCtx.drawImage(v,0,0,qrCanvas.width,qrCanvas.height);
     const img=qrCtx.getImageData(0,0,qrCanvas.width,qrCanvas.height);
     const code=window.jsQR?jsQR(img.data,img.width,img.height):null;
-    if(code&&code.data){ stopQRScan(); lookupQR(code.data); }
+    if(code&&code.data){ stopQRScan(); lookupQR(code.data); return; }
   }
   requestAnimationFrame(qrTick);
 }
