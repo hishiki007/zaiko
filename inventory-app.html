@@ -1092,24 +1092,48 @@ function openQR(){
 }
 function onQRPhotoSelect(e){
   const file=e.target.files[0]; if(!file) return;
+  id('qr-result').innerHTML=`<div style="padding:12px;color:var(--muted);font-size:13px;">解析中...</div>`;
   const img=new Image();
   const objUrl=URL.createObjectURL(file);
   img.onload=()=>{
     URL.revokeObjectURL(objUrl);
-    const c=document.createElement('canvas');
-    c.width=img.naturalWidth; c.height=img.naturalHeight;
-    const cx=c.getContext('2d',{willReadFrequently:true});
-    cx.drawImage(img,0,0);
-    const data=cx.getImageData(0,0,c.width,c.height);
-    const code=window.jsQR?jsQR(data.data,data.width,data.height):null;
-    if(code&&code.data){
-      lookupQR(code.data);
+    const code=findQRInImage(img);
+    if(code){
+      lookupQR(code);
     } else {
-      id('qr-result').innerHTML=`<div style="padding:12px;background:#fef2f2;border-radius:8px;color:var(--danger);font-size:13px;">写真からQRコードを読み取れませんでした。QRシールが大きく、はっきり写るように撮り直してみてください。</div>`;
+      id('qr-result').innerHTML=`<div style="padding:12px;background:#fef2f2;border-radius:8px;color:var(--danger);font-size:13px;">写真からQRコードを読み取れませんでした。QRコード部分だけが大きく写るように、もっと近づいて撮り直してみてください。反射や汚れがあると読み取りにくくなります。</div>`;
     }
   };
   img.src=objUrl;
   e.target.value='';
+}
+
+function findQRInImage(img){
+  const iw=img.naturalWidth, ih=img.naturalHeight;
+  // 1) まず画像全体で試す
+  let code=decodeQRFromCrop(img,0,0,iw,ih);
+  if(code) return code;
+  // 2) 中心を基準に、だんだん狭い範囲を切り出して拡大しながら試す（QRが小さく写っている場合の対策）
+  const ratios=[0.7,0.5,0.35,0.25,0.18];
+  const cx=iw/2, cy=ih/2;
+  for(const r of ratios){
+    const cw=iw*r, ch=ih*r;
+    code=decodeQRFromCrop(img,cx-cw/2,cy-ch/2,cw,ch);
+    if(code) return code;
+  }
+  return null;
+}
+function decodeQRFromCrop(img,sx,sy,sw,sh){
+  const target=900;
+  const scale=Math.max(1,target/Math.min(sw,sh));
+  const outW=Math.round(sw*scale), outH=Math.round(sh*scale);
+  const c=document.createElement('canvas');
+  c.width=outW; c.height=outH;
+  const cx=c.getContext('2d',{willReadFrequently:true});
+  cx.drawImage(img,sx,sy,sw,sh,0,0,outW,outH);
+  const data=cx.getImageData(0,0,outW,outH);
+  const result=window.jsQR?jsQR(data.data,data.width,data.height):null;
+  return result?result.data:null;
 }
 async function startQRScan(){
   try{
