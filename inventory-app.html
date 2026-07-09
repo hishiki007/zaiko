@@ -410,6 +410,8 @@ tr:hover td { background: #f8fafc; }
       <button class="btn btn-primary" style="flex:1;" id="qr-cam-btn" onclick="startQRScan()">カメラを起動</button>
       <button class="btn btn-outline" id="qr-stop-btn" style="display:none;" onclick="stopQRScan()">停止</button>
     </div>
+    <label class="btn btn-success" style="display:block;text-align:center;cursor:pointer;margin-bottom:10px;" for="qr-photo-input">📷 写真を撮って読み取る（読み取れない時はこちら）</label>
+    <input type="file" id="qr-photo-input" accept="image/*" capture="environment" style="display:none" onchange="onQRPhotoSelect(event)" />
     <div class="field"><label>または部品番号を直接入力</label>
       <input type="text" id="qr-manual" placeholder="例: P-001" onkeydown="if(event.key==='Enter')lookupQR(id('qr-manual').value)" />
     </div>
@@ -1088,9 +1090,30 @@ function openQR(){
   id('qr-manual').value='';
   open_('ov-qr');
 }
+function onQRPhotoSelect(e){
+  const file=e.target.files[0]; if(!file) return;
+  const img=new Image();
+  const objUrl=URL.createObjectURL(file);
+  img.onload=()=>{
+    URL.revokeObjectURL(objUrl);
+    const c=document.createElement('canvas');
+    c.width=img.naturalWidth; c.height=img.naturalHeight;
+    const cx=c.getContext('2d',{willReadFrequently:true});
+    cx.drawImage(img,0,0);
+    const data=cx.getImageData(0,0,c.width,c.height);
+    const code=window.jsQR?jsQR(data.data,data.width,data.height):null;
+    if(code&&code.data){
+      lookupQR(code.data);
+    } else {
+      id('qr-result').innerHTML=`<div style="padding:12px;background:#fef2f2;border-radius:8px;color:var(--danger);font-size:13px;">写真からQRコードを読み取れませんでした。QRシールが大きく、はっきり写るように撮り直してみてください。</div>`;
+    }
+  };
+  img.src=objUrl;
+  e.target.value='';
+}
 async function startQRScan(){
   try{
-    qrStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});
+    qrStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:1920},height:{ideal:1080}}});
     const v=id('qr-video'); v.srcObject=qrStream; v.style.display='block';
     id('qr-idle').style.display='none';
     id('qr-cam-btn').style.display='none';
