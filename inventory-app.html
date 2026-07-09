@@ -412,8 +412,8 @@ tr:hover td { background: #f8fafc; }
       <button class="btn btn-primary" style="flex:1;" id="qr-cam-btn" onclick="startQRScan()">カメラを起動</button>
       <button class="btn btn-outline" id="qr-stop-btn" style="display:none;" onclick="stopQRScan()">停止</button>
     </div>
-    <button class="btn btn-success" style="display:block;width:100%;margin-bottom:10px;" onclick="id('qr-photo-input').click()">📷 写真で読み取る</button>
-    <input type="file" id="qr-photo-input" accept="image/*" capture="environment" style="position:fixed;left:-9999px;top:-9999px;width:1px;height:1px;opacity:0;" onchange="onQRPhotoSelect(event)" />
+    <label class="btn btn-success" style="display:block;text-align:center;cursor:pointer;margin-bottom:10px;" for="qr-photo-input">📷 写真で読み取る</label>
+    <input type="file" id="qr-photo-input" accept="image/*" capture="environment" style="display:none" onchange="onQRPhotoSelect(event)" />
     <div class="field"><label>部品番号・部品名を直接入力</label>
       <input type="text" id="qr-manual" placeholder="例: 27313 またはフィルター" onkeydown="if(event.key==='Enter'){lookupQR(this.value);}" style="font-size:16px;" />
     </div>
@@ -1096,40 +1096,38 @@ function openQR(){
   id('qr-manual').value='';
   open_('ov-qr');
 }
-async function onQRPhotoSelect(e){
+function onQRPhotoSelect(e){
   const file=e.target.files[0]; if(!file) return;
   e.target.value='';
   toast('📷 解析中...');
   id('qr-result').innerHTML=`<div style="padding:8px 12px;background:#f8fafc;border-radius:6px;font-size:13px;color:var(--muted);">📷 解析中...</div>`;
 
-  let code=null;
+  function done(code){
+    if(code){
+      toast('✅ QR読取: '+code);
+      lookupQR(code);
+    } else {
+      toast('❌ 読み取れませんでした');
+      id('qr-result').innerHTML=`<div style="padding:12px;background:#fef2f2;border-radius:8px;color:var(--danger);font-size:13px;">読み取れませんでした。明るい場所でQRコードに正対して撮影してください。</div>`;
+    }
+  }
 
-  // 方法1: BarcodeDetector（iOS17+）でファイルを直接デコード — 最も確実
+  function tryJsQR(){
+    const img=new Image();
+    const objUrl=URL.createObjectURL(file);
+    img.onload=()=>{ URL.revokeObjectURL(objUrl); done(findQRInImage(img)); };
+    img.onerror=()=>{ URL.revokeObjectURL(objUrl); done(null); };
+    img.src=objUrl;
+  }
+
+  // BarcodeDetector（iOS17+）が使えれば先に試す、なければjsQR
   if(barcodeDetector){
-    try{
-      const bitmap=await createImageBitmap(file);
-      const codes=await barcodeDetector.detect(bitmap);
-      if(codes.length>0) code=codes[0].rawValue;
-    }catch(err){ console.log('BarcodeDetector error:',err); }
-  }
-
-  // 方法2: jsQR（フォールバック）
-  if(!code){
-    code=await new Promise(resolve=>{
-      const img=new Image();
-      const objUrl=URL.createObjectURL(file);
-      img.onload=()=>{ URL.revokeObjectURL(objUrl); resolve(findQRInImage(img)); };
-      img.onerror=()=>{ URL.revokeObjectURL(objUrl); resolve(null); };
-      img.src=objUrl;
-    });
-  }
-
-  if(code){
-    toast('✅ QR読取: '+code);
-    lookupQR(code);
+    createImageBitmap(file)
+      .then(bm=>barcodeDetector.detect(bm))
+      .then(codes=>{ if(codes.length>0) done(codes[0].rawValue); else tryJsQR(); })
+      .catch(()=>tryJsQR());
   } else {
-    toast('❌ 読み取れませんでした');
-    id('qr-result').innerHTML=`<div style="padding:12px;background:#fef2f2;border-radius:8px;color:var(--danger);font-size:13px;">読み取れませんでした。明るい場所でQRコードに正対して撮影してください。</div>`;
+    tryJsQR();
   }
 }
 
