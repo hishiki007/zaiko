@@ -11,7 +11,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jsqr/1.4.0/jsQR.js"></script>
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <style>
 :root {
   --primary: #2563eb; --primary-dark: #1d4ed8;
@@ -402,17 +402,18 @@ tr:hover td { background: #f8fafc; }
 <div class="overlay" id="ov-qr" onclick="closeOv('ov-qr',event)">
   <div class="modal" style="max-width:420px;">
     <h3>📱 バーコード / QRスキャン</h3>
-    <!-- 結果を上部に表示（スクロール不要） -->
     <div id="qr-result" style="margin-bottom:10px;min-height:20px;"></div>
-    <div id="qr-viewport" style="position:relative;width:100%;height:200px;background:#0f172a;border-radius:10px;overflow:hidden;display:flex;align-items:center;justify-content:center;margin-bottom:10px;">
-      <video id="qr-video" autoplay playsinline muted style="width:100%;height:100%;object-fit:cover;display:none;"></video>
-      <div id="qr-idle" style="color:#94a3b8;font-size:13px;text-align:center;padding:0 24px;">カメラを起動してバーコードまたはQRコードを写してください</div>
+    <!-- html5-qrcode がカメラUIをここに描画 -->
+    <div id="qr-scanner-box" style="display:none;border-radius:10px;overflow:hidden;margin-bottom:10px;"></div>
+    <!-- カメラ未起動時のプレースホルダー -->
+    <div id="qr-idle-box" style="width:100%;height:180px;background:#0f172a;border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:10px;">
+      <div style="color:#94a3b8;font-size:13px;text-align:center;padding:0 24px;">カメラを起動してQRコードを写してください</div>
     </div>
     <div style="display:flex;gap:8px;margin-bottom:10px;">
       <button class="btn btn-primary" style="flex:1;" id="qr-cam-btn" onclick="startQRScan()">カメラを起動</button>
       <button class="btn btn-outline" id="qr-stop-btn" style="display:none;" onclick="stopQRScan()">停止</button>
     </div>
-    <button class="btn btn-success" style="display:block;width:100%;margin-bottom:10px;" onclick="toast('ボタンOK'); var el=document.getElementById('qr-photo-input'); if(el){toast('要素あり');el.click();}else{toast('要素なし');}">📷 写真で読み取る</button>
+    <button class="btn btn-success" style="display:block;width:100%;margin-bottom:10px;" onclick="document.getElementById('qr-photo-input').click()">📷 写真で読み取る</button>
     <input type="file" id="qr-photo-input" accept="image/*" capture="environment" style="position:fixed;left:-9999px;top:-9999px;width:1px;height:1px;opacity:0;" onchange="onQRPhotoSelect(event)" />
     <div class="field"><label>部品番号・部品名を直接入力</label>
       <input type="text" id="qr-manual" placeholder="例: 27313 またはフィルター" onkeydown="if(event.key==='Enter'){lookupQR(this.value);}" style="font-size:16px;" />
@@ -1082,165 +1083,78 @@ async function deletePhoto(key,idx){
 function showLightbox(url){ id('lightbox-img').src=url; id('lightbox').classList.add('open'); }
 function closeLightbox(){ id('lightbox').classList.remove('open'); id('lightbox-img').src=''; }
 
-let qrStream=null, qrScanning=false;
-// BarcodeDetector: iOS17+/Chrome対応（QRコードも1Dバーコードも読める）
-let barcodeDetector=null;
-if('BarcodeDetector' in window){
-  try{ barcodeDetector=new BarcodeDetector({formats:['qr_code','ean_13','ean_8','code_128','code_39','upc_a','upc_e','data_matrix','itf']}); }catch(_){}
-}
-const qrCanvas=document.createElement('canvas');
-const qrCtx=qrCanvas.getContext('2d',{willReadFrequently:true});
+// html5-qrcode（ZXingベース）によるQRスキャン
+let qrH5=null; // Html5Qrcode インスタンス
 
 function openQR(){
   id('qr-result').innerHTML='';
   id('qr-manual').value='';
   open_('ov-qr');
 }
-function onQRPhotoSelect(e){
-  const file=e.target.files[0]; if(!file) return;
-  e.target.value='';
-  toast('📷 解析中...');
-  id('qr-result').innerHTML=`<div style="padding:8px 12px;background:#f8fafc;border-radius:6px;font-size:13px;color:var(--muted);">📷 解析中...</div>`;
 
-  function done(code){
-    if(code){
-      toast('✅ QR読取: '+code);
-      lookupQR(code);
-    } else {
-      toast('❌ 読み取れませんでした');
-      id('qr-result').innerHTML=`<div style="padding:12px;background:#fef2f2;border-radius:8px;color:var(--danger);font-size:13px;">読み取れませんでした。明るい場所でQRコードに正対して撮影してください。</div>`;
-    }
-  }
+function startQRScan(){
+  id('qr-cam-btn').style.display='none';
+  id('qr-stop-btn').style.display='inline-block';
+  id('qr-idle-box').style.display='none';
+  id('qr-scanner-box').style.display='block';
+  toast('📷 カメラ起動中...');
 
-  function tryJsQR(){
-    const img=new Image();
-    const objUrl=URL.createObjectURL(file);
-    img.onload=()=>{ URL.revokeObjectURL(objUrl); done(findQRInImage(img)); };
-    img.onerror=()=>{ URL.revokeObjectURL(objUrl); done(null); };
-    img.src=objUrl;
-  }
-
-  // BarcodeDetector（iOS17+）が使えれば先に試す、なければjsQR
-  if(barcodeDetector){
-    createImageBitmap(file)
-      .then(bm=>barcodeDetector.detect(bm))
-      .then(codes=>{ if(codes.length>0) done(codes[0].rawValue); else tryJsQR(); })
-      .catch(()=>tryJsQR());
-  } else {
-    tryJsQR();
-  }
+  qrH5=new Html5Qrcode('qr-scanner-box');
+  qrH5.start(
+    {facingMode:'environment'},
+    {fps:10, qrbox:{width:220,height:220}},
+    function(decodedText){
+      stopQRScan();
+      id('qr-manual').value=decodedText;
+      toast('✅ 読取成功: '+decodedText);
+      lookupQR(decodedText);
+    },
+    function(){}  // スキャン失敗は無視
+  ).then(function(){
+    toast('📷 スキャン中...');
+  }).catch(function(err){
+    toast('カメラエラー: '+(err.message||err));
+    stopQRScan();
+  });
 }
 
-function drawFiltered(src,w,h,filter){
-  const c=document.createElement('canvas'); c.width=w; c.height=h;
-  const ctx=c.getContext('2d',{willReadFrequently:true});
-  ctx.filter=filter; ctx.drawImage(src,0,0,w,h); ctx.filter='none';
-  return c;
-}
-function tryJsQR(canvas,w,h){
-  if(!window.jsQR) return null;
-  const d=canvas.getContext('2d',{willReadFrequently:true}).getImageData(0,0,w,h);
-  const r=jsQR(d.data,w,h,{inversionAttempts:'attemptBoth'});
-  return r?r.data:null;
-}
-function findQRInImage(img){
-  const iw=img.naturalWidth, ih=img.naturalHeight;
-  // 最大1000pxにダウンスケール（iOS Safariのcanvasメモリ制限対策）
-  const MAX=1000;
-  const s=Math.min(1, MAX/Math.max(iw,ih));
-  const bw=Math.round(iw*s), bh=Math.round(ih*s);
-
-  // フィルター別に試す: 通常・コントラスト強調・反転
-  const filters=['none','contrast(200%) brightness(120%)','invert(1)','contrast(300%)'];
-  for(const f of filters){
-    const base=document.createElement('canvas'); base.width=bw; base.height=bh;
-    const bCtx=base.getContext('2d',{willReadFrequently:true});
-    bCtx.filter=f; bCtx.drawImage(img,0,0,bw,bh); bCtx.filter='none';
-    // 全体
-    let r=tryJsQR(base,bw,bh); if(r) return r;
-    // 中心クロップ
-    const cx=bw/2, cy=bh/2;
-    for(const ratio of [0.75,0.55,0.4]){
-      const cw=Math.round(bw*ratio), ch=Math.round(bh*ratio);
-      const sc=Math.max(1,800/Math.min(cw,ch));
-      const ow=Math.round(cw*sc), oh=Math.round(ch*sc);
-      const c2=document.createElement('canvas'); c2.width=ow; c2.height=oh;
-      c2.getContext('2d',{willReadFrequently:true}).drawImage(base,cx-cw/2,cy-ch/2,cw,ch,0,0,ow,oh);
-      r=tryJsQR(c2,ow,oh); if(r) return r;
-    }
-  }
-  return null;
-}
-async function startQRScan(){
-  try{
-    qrStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:1280},height:{ideal:720}}});
-    const v=id('qr-video');
-    v.srcObject=qrStream;
-    v.style.display='block';
-    id('qr-idle').style.display='none';
-    id('qr-cam-btn').style.display='none';
-    id('qr-stop-btn').style.display='inline-block';
-    qrScanning=true;
-    // 診断: BarcodeDetector使用可否をトーストで通知
-    toast(barcodeDetector ? '📷 スキャン開始（バーコード対応）' : '📷 スキャン開始（QRコードのみ）');
-    try{ await v.play(); }catch(_){}
-    setTimeout(qrTick, 500);
-  }catch(e){
-    toast('カメラエラー: ' + (e.message||e));
-  }
-}
 function stopQRScan(){
-  qrScanning=false; qrTickCount=0;
-  if(qrStream){ qrStream.getTracks().forEach(t=>t.stop()); qrStream=null; }
-  const v=id('qr-video'); v.srcObject=null; v.style.display='none';
-  id('qr-idle').textContent='カメラを起動してバーコードまたはQRコードを写してください';
-  id('qr-idle').style.display='block';
+  id('qr-scanner-box').style.display='none';
+  id('qr-idle-box').style.display='flex';
   id('qr-cam-btn').style.display='inline-block';
   id('qr-stop-btn').style.display='none';
-}
-let qrTickCount=0;
-async function qrTick(){
-  if(!qrScanning) return;
-  const v=id('qr-video');
-  if(v.readyState>=2 && v.videoWidth>0 && v.videoHeight>0){
-    let decoded=null;
-    // 1) BarcodeDetector（iOS17+/Chrome）: QR・バーコード両対応
-    if(barcodeDetector){
-      try{
-        const codes=await barcodeDetector.detect(v);
-        if(codes.length>0) decoded=codes[0].rawValue;
-      }catch(_){}
-    }
-    // 2) フォールバック: jsQR（QRコードのみ）- 写真と同じ多段スケール処理
-    if(!decoded && window.jsQR){
-      qrCanvas.width=v.videoWidth; qrCanvas.height=v.videoHeight;
-      qrCtx.drawImage(v,0,0,qrCanvas.width,qrCanvas.height);
-      // まず全体、次に中心クロップで試す
-      const imgFull=qrCtx.getImageData(0,0,qrCanvas.width,qrCanvas.height);
-      const c1=jsQR(imgFull.data,imgFull.width,imgFull.height);
-      if(c1) decoded=c1.data;
-      if(!decoded){
-        const cx=Math.floor(qrCanvas.width/2), cy=Math.floor(qrCanvas.height/2);
-        const half=Math.floor(Math.min(qrCanvas.width,qrCanvas.height)*0.4);
-        const imgCrop=qrCtx.getImageData(cx-half,cy-half,half*2,half*2);
-        const c2=jsQR(imgCrop.data,imgCrop.width,imgCrop.height);
-        if(c2) decoded=c2.data;
-      }
-    }
-    if(decoded){
-      stopQRScan();
-      id('qr-manual').value=decoded;
-      id('qr-result').innerHTML=`<div style="padding:6px 10px;background:#f0fdf4;border-radius:6px;font-size:12px;color:#166534;margin-bottom:6px;">✅ 読み取り: ${esc(decoded)}</div>`;
-      lookupQR(decoded); return;
-    }
-    // 10フレームごとにスキャン中を表示（ループ生存確認）
-    qrTickCount++;
-    if(qrTickCount%10===0){
-      id('qr-idle').textContent='スキャン中... ('+qrTickCount+'フレーム処理済)';
-      id('qr-idle').style.display='block';
-    }
+  if(qrH5){
+    var inst=qrH5; qrH5=null;
+    inst.stop().catch(function(){}).finally(function(){ try{inst.clear();}catch(_){} });
   }
-  if(qrScanning) setTimeout(qrTick, 200);
+}
+
+function onQRPhotoSelect(e){
+  var file=e.target.files[0]; if(!file) return;
+  e.target.value='';
+  toast('📷 解析中...');
+  id('qr-result').innerHTML='<div style="padding:8px 12px;background:#f8fafc;border-radius:6px;font-size:13px;color:var(--muted);">📷 解析中...</div>';
+
+  // スキャン用の非表示DIV
+  var scanDivId='qr-scan-file-div';
+  if(!document.getElementById(scanDivId)){
+    var d=document.createElement('div');
+    d.id=scanDivId;
+    d.style.cssText='position:fixed;left:-9999px;top:-9999px;width:1px;height:1px;';
+    document.body.appendChild(d);
+  }
+
+  var scanner=new Html5Qrcode(scanDivId);
+  scanner.scanFile(file, false)
+    .then(function(text){
+      toast('✅ QR読取: '+text);
+      id('qr-manual').value=text;
+      lookupQR(text);
+    })
+    .catch(function(){
+      toast('❌ 読み取れませんでした');
+      id('qr-result').innerHTML='<div style="padding:12px;background:#fef2f2;border-radius:8px;color:var(--danger);font-size:13px;">読み取れませんでした。QRコードを画面いっぱいに写して再度お試しください。</div>';
+    });
 }
 function lookupQR(value){
   const v=(value||'').trim();
