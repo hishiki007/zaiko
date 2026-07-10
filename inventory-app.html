@@ -418,7 +418,7 @@ tr:hover td { background: #f8fafc; }
     <div class="field"><label>部品番号・部品名を直接入力</label>
       <input type="text" id="qr-manual" placeholder="例: 27313 またはフィルター" onkeydown="if(event.key==='Enter'){lookupQR(this.value);}" style="font-size:16px;" />
     </div>
-    <button class="btn btn-primary" style="width:100%;margin-top:6px;" onclick="lookupQR(id('qr-manual').value)">🔍 検索</button>
+    <button class="btn btn-primary" style="width:100%;margin-top:6px;" ontouchend="event.preventDefault();lookupQR(id('qr-manual').value);" onclick="lookupQR(id('qr-manual').value)">🔍 検索</button>
     <div class="modal-footer" style="margin-top:10px;">
       <button class="btn btn-outline" onclick="stopQRScan();closeOv('ov-qr')">閉じる</button>
     </div>
