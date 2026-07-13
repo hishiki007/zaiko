@@ -480,6 +480,8 @@ function selectOperator(name){
   localStorage.setItem('current_operator',name);
   id('cur-op-label').textContent=name;
   closeOv('ov-operator');
+  const tab=document.querySelector('.loc-tab[data-loc="'+name+'"]');
+  if(tab) setLocTab(tab,name);
 }
 function renameOperator(i){
   const nn=prompt('名前を編集',OPERATORS[i]);
@@ -491,6 +493,7 @@ function renameOperator(i){
   }
 }
 id('cur-op-label').textContent=currentOperator||'未選択';
+if(currentOperator){ const t=document.querySelector('.loc-tab[data-loc="'+currentOperator+'"]'); if(t) setLocTab(t,currentOperator); }
 
 function connect() {
   if(typeof firebase==='undefined'){ showErr('Firebase読み込み中です。少し待ってから再度押してください。'); return; }
@@ -1359,16 +1362,13 @@ function renderInspConfirm(){
     }
   });
 
-  html+=`<div style="display:flex;flex-direction:column;gap:8px;margin-top:14px;">
-    <button class="btn" style="width:100%;padding:12px;font-size:14px;background:#7c3aed;color:#fff;"
-      onmousedown="event.preventDefault();" onclick="doInspectionOut()">
-      📤 ${loc?esc(loc)+'から':''}出庫を確定する
-    </button>
-    ${loc&&loc!=='シンワ倉庫'?`<button class="btn btn-warning" style="width:100%;padding:12px;font-size:14px;"
-      onmousedown="event.preventDefault();" onclick="doInspectionTransfer()">
-      ↔ シンワ倉庫から${esc(loc)}へ移動する
-    </button>`:''}
-  </div>`;
+  const transferBtn=(loc&&loc!=='シンワ倉庫')
+    ?'<button class="btn btn-warning" style="width:100%;padding:12px;font-size:14px;" onmousedown="event.preventDefault();" onclick="doInspectionTransfer()">↔ シンワ倉庫から'+esc(loc)+'へ移動する</button>'
+    :'';
+  html+='<div style="display:flex;flex-direction:column;gap:8px;margin-top:14px;">'
+    +'<button class="btn" style="width:100%;padding:12px;font-size:14px;background:#7c3aed;color:#fff;" onmousedown="event.preventDefault();" onclick="doInspectionOut()">📤 '+(loc?esc(loc)+'から':'')+'出庫を確定する</button>'
+    +transferBtn
+    +'</div>';
   id('insp-body').innerHTML=html;
 }
 
