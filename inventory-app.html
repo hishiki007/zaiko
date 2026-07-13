@@ -1359,11 +1359,46 @@ function renderInspConfirm(){
     }
   });
 
-  html+=`<button class="btn" style="width:100%;margin-top:14px;padding:12px;font-size:14px;background:#7c3aed;color:#fff;"
-    onmousedown="event.preventDefault();" onclick="doInspectionOut()">
-    📤 ${loc?esc(loc)+'から':''}出庫を確定する
-  </button>`;
+  html+=`<div style="display:flex;flex-direction:column;gap:8px;margin-top:14px;">
+    <button class="btn" style="width:100%;padding:12px;font-size:14px;background:#7c3aed;color:#fff;"
+      onmousedown="event.preventDefault();" onclick="doInspectionOut()">
+      📤 ${loc?esc(loc)+'から':''}出庫を確定する
+    </button>
+    ${loc&&loc!=='シンワ倉庫'?`<button class="btn btn-warning" style="width:100%;padding:12px;font-size:14px;"
+      onmousedown="event.preventDefault();" onclick="doInspectionTransfer()">
+      ↔ シンワ倉庫から${esc(loc)}へ移動する
+    </button>`:''}
+  </div>`;
   id('insp-body').innerHTML=html;
+}
+
+function doInspectionTransfer(){
+  const loc=LOCS.includes(currentOperator)?currentOperator:null;
+  if(!loc){toast('出庫場所が特定できません');return;}
+  if(loc==='シンワ倉庫'){toast('シンワ倉庫自身への移動はできません');return;}
+  const tmpl=Object.values(inspTemplates).find(t=>t.machine===inspState.machine&&t.inspType===inspState.type);
+  if(!tmpl) return;
+  const arr=Array.isArray(tmpl.parts)?tmpl.parts:Object.values(tmpl.parts||{});
+  const upd={}; let count=0; const missing=[];
+  arr.forEach((p,i)=>{
+    const qty=inspState.qty[i]!==undefined?inspState.qty[i]:(p.qty||1);
+    if(qty===0) return;
+    const no=p.filterChoice?(inspState.filterChoice[i]||p.no):p.no;
+    const entry=Object.entries(parts).find(([k,v])=>String(v.no||'').trim()===String(no||'').trim());
+    if(!entry){missing.push(no);return;}
+    const [key,part]=entry;
+    const fCur=(part.locs||{})['シンワ倉庫']||0;
+    const tCur=(part.locs||{})[loc]||0;
+    upd[`parts/${key}/locs/シンワ倉庫`]=fCur-qty;
+    upd[`parts/${key}/locs/${loc}`]=tCur+qty;
+    upd[`parts/${key}/updatedAt`]=Date.now();
+    addHist('move',key,part.name,`点検移動(${inspState.machine}/${inspState.type}) シンワ倉庫→${loc}: ${fCur}→${fCur-qty} / ${tCur}→${tCur+qty}`);
+    count++;
+  });
+  if(count===0&&missing.length>0){toast('❌ 部品が見つかりません: '+missing.join(', '));return;}
+  db.ref().update(upd);
+  toast(missing.length>0?`✅ ${count}種移動（未登録: ${missing.join(', ')}）`:`✅ シンワ倉庫→${loc}へ${count}種類移動しました`);
+  closeOv('ov-insp');
 }
 
 function inspQty(idx,delta){
