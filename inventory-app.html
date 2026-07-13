@@ -1212,48 +1212,78 @@ function lookupQR(value){
   toast('✅ '+match[1].name);
   renderQRResult(key);
 }
+let qrPending={key:null,loc:null,delta:0};
 function renderQRResult(key){
   const p=parts[key]; if(!p) return;
   const locs=p.locs||{};
-  id('qr-result').innerHTML=`
-    <div style="border:1px solid var(--border);border-radius:10px;padding:14px;">
-      <div style="font-weight:700;margin-bottom:2px;">${esc(p.name)}</div>
-      <div style="font-family:monospace;font-size:12px;color:var(--muted);margin-bottom:10px;">${esc(p.no||'')}</div>
-      <div style="margin-bottom:12px;">
-        ${LOCS.map(l=>{
-          const cnt=locs[l]||0;
-          return `<div style="display:flex;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);">
-            <span style="flex:1;font-size:13px;">${esc(l)}</span>
-            <span style="font-weight:700;min-width:32px;text-align:right;margin-right:8px;color:${cnt>0?'var(--success)':'var(--muted)'};">${cnt}</span>
-            <button class="btn" style="padding:4px 12px;font-size:17px;line-height:1;min-width:38px;"
-              onmousedown="event.preventDefault();"
-              onclick="quickStock('${key}','${esc(l)}',-1)">−</button>
-            <button class="btn btn-primary" style="padding:4px 12px;font-size:17px;line-height:1;min-width:38px;margin-left:4px;"
-              onmousedown="event.preventDefault();"
-              onclick="quickStock('${key}','${esc(l)}',1)">＋</button>
-          </div>`;
-        }).join('')}
-      </div>
-      <div style="display:flex;gap:8px;">
-        <button class="btn btn-outline" style="flex:1;" onclick="closeOv('ov-qr');openStock('${key}')">詳細変更</button>
-        <button class="btn btn-warning" style="flex:1;" onclick="closeOv('ov-qr');openTransfer('${key}')">移動する</button>
-      </div>
-    </div>`;
+  const loc=LOCS.includes(currentOperator)?currentOperator:null;
+  if(qrPending.key!==key||qrPending.loc!==loc) qrPending={key,loc,delta:0};
+  const cur=loc?(locs[loc]||0):0;
+  const after=cur+qrPending.delta;
+  const changed=qrPending.delta!==0;
+  const deltaStr=qrPending.delta>0?'+'+qrPending.delta:String(qrPending.delta);
+  let locRow='';
+  if(loc){
+    locRow='<div style="border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:12px;background:var(--bg);">'
+      +'<div style="font-size:12px;color:var(--muted);margin-bottom:8px;">'+esc(loc)+'</div>'
+      +'<div style="display:flex;align-items:center;gap:8px;">'
+        +'<button class="btn" style="padding:8px 18px;font-size:22px;line-height:1;min-width:48px;" onmousedown="event.preventDefault();" onclick="adjustQRDelta(\''+key+'\',-1)">−</button>'
+        +'<div style="flex:1;text-align:center;">'
+          +(changed
+            ?'<span style="color:var(--muted);font-size:15px;">'+cur+'</span> <span style="color:var(--muted);">→</span> <span style="font-size:26px;font-weight:700;color:'+(after>0?'var(--success)':after<0?'var(--danger)':'var(--muted)')+';">'+after+'</span>'
+            :'<span style="font-size:26px;font-weight:700;color:'+(cur>0?'var(--success)':'var(--muted)')+';">'+cur+'</span>')
+        +'</div>'
+        +'<button class="btn btn-primary" style="padding:8px 18px;font-size:22px;line-height:1;min-width:48px;" onmousedown="event.preventDefault();" onclick="adjustQRDelta(\''+key+'\',1)">＋</button>'
+      +'</div>'
+      +(changed
+        ?'<div style="margin-top:10px;display:flex;gap:8px;">'
+          +'<button class="btn btn-ghost btn-sm" style="flex:1;" onmousedown="event.preventDefault();" onclick="cancelQRDelta(\''+key+'\')">キャンセル</button>'
+          +'<button class="btn btn-primary" style="flex:1;" onmousedown="event.preventDefault();" onclick="confirmQRDelta(\''+key+'\')">✅ 確定 ('+deltaStr+')</button>'
+        +'</div>'
+        :'')
+      +'</div>';
+  } else {
+    locRow='<div style="color:var(--muted);font-size:13px;margin-bottom:12px;">作業者を選択してください</div>';
+  }
+  id('qr-result').innerHTML=
+    '<div style="border:1px solid var(--border);border-radius:10px;padding:14px;">'
+      +'<div style="font-weight:700;margin-bottom:2px;">'+esc(p.name)+'</div>'
+      +'<div style="font-family:monospace;font-size:12px;color:var(--muted);margin-bottom:10px;">'+esc(p.no||'')+'</div>'
+      +locRow
+      +'<div style="display:flex;gap:8px;">'
+        +'<button class="btn btn-outline" style="flex:1;" onclick="closeOv(\'ov-qr\');openStock(\''+key+'\')">詳細変更</button>'
+        +'<button class="btn btn-warning" style="flex:1;" onclick="closeOv(\'ov-qr\');openTransfer(\''+key+'\')">移動する</button>'
+      +'</div>'
+    +'</div>';
   id('qr-result').scrollIntoView({behavior:'smooth',block:'nearest'});
 }
-function quickStock(key, loc, delta){
+function adjustQRDelta(key,d){
   if(!currentOperator){ toast('先に作業者を選択してください'); openOperatorModal(); return; }
+  const loc=LOCS.includes(currentOperator)?currentOperator:null;
+  if(qrPending.key!==key) qrPending={key,loc,delta:0};
+  qrPending.delta+=d;
+  renderQRResult(key);
+}
+function cancelQRDelta(key){
+  const loc=LOCS.includes(currentOperator)?currentOperator:null;
+  qrPending={key,loc,delta:0};
+  renderQRResult(key);
+}
+function confirmQRDelta(key){
   const p=parts[key]; if(!p) return;
+  const {loc,delta}=qrPending;
+  if(!loc||delta===0) return;
   if(!p.locs) p.locs={};
   const cur=p.locs[loc]||0;
   const nv=cur+delta;
   const upd={};
-  upd[`parts/${key}/locs/${loc}`]=nv;
-  upd[`parts/${key}/updatedAt`]=Date.now();
+  upd['parts/'+key+'/locs/'+loc]=nv;
+  upd['parts/'+key+'/updatedAt']=Date.now();
   db.ref().update(upd);
-  addHist(delta>0?'in':'out', key, p.name, `${delta>0?'入庫 ＋':'出庫 −'} ${loc}: ${cur}→${nv}`);
-  toast(`✅ ${loc}: ${cur} → ${nv}`);
+  addHist(delta>0?'in':'out',key,p.name,(delta>0?'入庫 ＋':'出庫 −')+' '+loc+': '+cur+'→'+nv);
+  toast('✅ '+loc+': '+cur+' → '+nv);
   p.locs[loc]=nv;
+  qrPending={key,loc,delta:0};
   renderQRResult(key);
 }
 
