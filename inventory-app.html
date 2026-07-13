@@ -196,6 +196,7 @@ tr:hover td { background: #f8fafc; }
     <input type="file" id="csv-import-input" accept=".csv" style="display:none" onchange="handleCSVImport(event)" />
     <button class="btn btn-success" onclick="openScan()" id="scan-btn" style="display:none;">📷 納品書スキャン</button>
     <button class="btn btn-success" onclick="openQR()">📱 QRスキャン</button>
+    <button class="btn" style="background:#7c3aed;color:#fff;" onclick="openInspection()">🔧 点検</button>
   </div>
 
   <div class="loc-tabs">
@@ -427,6 +428,29 @@ tr:hover td { background: #f8fafc; }
   </div>
 </div>
 
+<!-- 点検出庫モーダル -->
+<div class="overlay" id="ov-insp" onclick="closeOv('ov-insp',event)">
+  <div class="modal" style="max-width:480px;">
+    <h3>🔧 点検出庫</h3>
+    <div id="insp-body" style="min-height:80px;"></div>
+    <div class="modal-footer" style="justify-content:space-between;">
+      <button class="btn btn-ghost btn-sm" onclick="openInspMaster()">⚙️ マスタ編集</button>
+      <button class="btn btn-outline" onclick="closeOv('ov-insp')">閉じる</button>
+    </div>
+  </div>
+</div>
+
+<!-- 点検マスタ編集モーダル -->
+<div class="overlay" id="ov-insp-master" onclick="closeOv('ov-insp-master',event)">
+  <div class="modal" style="max-width:520px;">
+    <h3>⚙️ 点検マスタ編集</h3>
+    <div id="insp-master-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeOv('ov-insp-master')">閉じる</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 
@@ -488,6 +512,7 @@ function initFB(cfg) {
       db = firebase.database();
       db.ref('.info/connected').on('value', s => { id('dot').className='dot'+(s.val()?'':' off'); });
       db.ref('parts').on('value', s => { parts=s.val()||{}; render(); updateTabs(); fillTrParts(); });
+      db.ref('inspectionTemplates').on('value', s => { inspTemplates=s.val()||{}; });
       db.ref('history').limitToLast(100).on('child_added', s => {
         const v=s.val(); hist.unshift(v); if(hist.length>100) hist.pop();
         renderHist(); if(openPartKey) renderPartHistModal();
@@ -1227,6 +1252,246 @@ function quickStock(key, loc, delta){
   toast(`✅ ${loc}: ${cur} → ${nv}`);
   p.locs[loc]=nv;
   renderQRResult(key);
+}
+
+// ===== 点検出庫機能 =====
+let inspTemplates={};
+let inspState={machine:null, type:null, qty:{}, filterChoice:{}};
+
+function openInspection(){
+  if(!currentOperator){ toast('先に作業者を選択してください'); openOperatorModal(); return; }
+  inspState={machine:null,type:null,qty:{},filterChoice:{}};
+  renderInspStep();
+  open_('ov-insp');
+}
+
+function renderInspStep(){
+  const body=id('insp-body');
+  if(!inspState.machine){
+    // ステップ1: 機種選択
+    const machines=[...new Set(Object.values(inspTemplates).map(t=>t.machine))].sort();
+    if(machines.length===0){
+      body.innerHTML='<p style="color:var(--muted);text-align:center;padding:24px 0;">テンプレート未登録です。<br>「マスタ編集」から追加してください。</p>';
+      return;
+    }
+    body.innerHTML=`<p style="font-size:13px;color:var(--muted);margin-bottom:10px;">機種を選択</p>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;">
+        ${machines.map(m=>`<button class="btn btn-primary" style="font-size:14px;padding:10px 22px;"
+          onmousedown="event.preventDefault();" onclick="selectInspMachine('${esc(m)}')">${esc(m)}</button>`).join('')}
+      </div>`;
+  } else if(!inspState.type){
+    // ステップ2: 点検種別選択
+    const types=Object.values(inspTemplates).filter(t=>t.machine===inspState.machine).map(t=>t.inspType).sort();
+    body.innerHTML=`<div style="margin-bottom:10px;">
+        <button class="btn btn-ghost btn-sm" onmousedown="event.preventDefault();" onclick="inspState.machine=null;renderInspStep();">← 機種選択に戻る</button>
+        <b style="margin-left:8px;font-size:13px;">${esc(inspState.machine)}</b>
+      </div>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:10px;">点検種別を選択</p>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;">
+        ${types.map(t=>`<button class="btn btn-warning" style="font-size:14px;padding:10px 22px;"
+          onmousedown="event.preventDefault();" onclick="selectInspType('${esc(t)}')">${esc(t)}</button>`).join('')}
+      </div>`;
+  } else {
+    renderInspConfirm();
+  }
+}
+
+function selectInspMachine(machine){
+  inspState.machine=machine; inspState.type=null;
+  renderInspStep();
+}
+
+function selectInspType(type){
+  inspState.type=type;
+  const tmpl=Object.values(inspTemplates).find(t=>t.machine===inspState.machine&&t.inspType===type);
+  inspState.qty={}; inspState.filterChoice={};
+  if(tmpl&&tmpl.parts){
+    const arr=Array.isArray(tmpl.parts)?tmpl.parts:Object.values(tmpl.parts);
+    arr.forEach((p,i)=>{ inspState.qty[i]=p.qty||1; if(p.filterChoice) inspState.filterChoice[i]=p.no; });
+  }
+  renderInspStep();
+}
+
+function renderInspConfirm(){
+  const tmpl=Object.values(inspTemplates).find(t=>t.machine===inspState.machine&&t.inspType===inspState.type);
+  const loc=LOCS.includes(currentOperator)?currentOperator:null;
+  if(!tmpl){id('insp-body').innerHTML='<p>テンプレートが見つかりません</p>';return;}
+  const arr=Array.isArray(tmpl.parts)?tmpl.parts:Object.values(tmpl.parts||{});
+
+  let html=`<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">
+    <button class="btn btn-ghost btn-sm" onmousedown="event.preventDefault();" onclick="inspState.type=null;renderInspStep();">← 種別選択に戻る</button>
+    </div>
+    <div style="background:var(--bg);border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:13px;">
+      <span><b>機種：</b>${esc(inspState.machine)}</span>　<span><b>点検：</b>${esc(inspState.type)}</span><br>
+      <span><b>出庫場所：</b>${loc?esc(loc):'<span style="color:var(--danger);">未設定（作業者名と場所名が一致していません）</span>'}</span>
+    </div>
+    <div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:4px;">使用部品</div>`;
+
+  arr.forEach((p,i)=>{
+    const qty=inspState.qty[i]!==undefined?inspState.qty[i]:(p.qty||1);
+    const partEntry=Object.entries(parts).find(([k,v])=>String(v.no||'').trim()===String(p.no||'').trim());
+    const pname=partEntry?partEntry[1].name:'（未登録）';
+    const stock=partEntry&&loc?((partEntry[1].locs||{})[loc]||0):'—';
+    const qtyBtns=`<button class="btn" style="padding:3px 11px;font-size:16px;line-height:1;" onmousedown="event.preventDefault();" onclick="inspQty(${i},-1)">−</button>
+      <span style="font-weight:700;min-width:24px;text-align:center;font-size:15px;">${qty}</span>
+      <button class="btn btn-primary" style="padding:3px 11px;font-size:16px;line-height:1;" onmousedown="event.preventDefault();" onclick="inspQty(${i},1)">＋</button>`;
+
+    if(p.filterChoice){
+      const chosen=inspState.filterChoice[i]||p.no;
+      const altNo=p.altNo||'580301';
+      html+=`<div style="padding:7px 0;border-bottom:1px solid var(--border);">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">浄水器カートリッジ（選択）　在庫: ${stock}</div>
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+          <button class="btn ${chosen===p.no?'btn-primary':''}" style="padding:4px 12px;font-size:12px;"
+            onmousedown="event.preventDefault();" onclick="inspState.filterChoice[${i}]='${esc(p.no)}';renderInspConfirm();">${esc(p.no)}</button>
+          <button class="btn ${chosen===altNo?'btn-primary':''}" style="padding:4px 12px;font-size:12px;"
+            onmousedown="event.preventDefault();" onclick="inspState.filterChoice[${i}]='${esc(altNo)}';renderInspConfirm();">${esc(altNo)}</button>
+          <span style="margin-left:auto;display:flex;align-items:center;gap:4px;">${qtyBtns}</span>
+        </div></div>`;
+    } else {
+      html+=`<div style="display:flex;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);gap:6px;">
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:12px;font-weight:700;">${esc(pname)}</div>
+          <div style="font-size:11px;color:var(--muted);font-family:monospace;">${esc(p.no||'')}　在庫: ${stock}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:4px;">${qtyBtns}</div>
+      </div>`;
+    }
+  });
+
+  html+=`<button class="btn" style="width:100%;margin-top:14px;padding:12px;font-size:14px;background:#7c3aed;color:#fff;"
+    onmousedown="event.preventDefault();" onclick="doInspectionOut()">
+    📤 ${loc?esc(loc)+'から':''}出庫を確定する
+  </button>`;
+  id('insp-body').innerHTML=html;
+}
+
+function inspQty(idx,delta){
+  inspState.qty[idx]=(inspState.qty[idx]||1)+delta;
+  renderInspConfirm();
+}
+
+function doInspectionOut(){
+  const loc=LOCS.includes(currentOperator)?currentOperator:null;
+  if(!loc){toast('出庫場所が特定できません（作業者を選択してください）');return;}
+  const tmpl=Object.values(inspTemplates).find(t=>t.machine===inspState.machine&&t.inspType===inspState.type);
+  if(!tmpl) return;
+  const arr=Array.isArray(tmpl.parts)?tmpl.parts:Object.values(tmpl.parts||{});
+  const upd={}; let count=0; const missing=[];
+  arr.forEach((p,i)=>{
+    const qty=inspState.qty[i]!==undefined?inspState.qty[i]:(p.qty||1);
+    if(qty===0) return;
+    const no=p.filterChoice?(inspState.filterChoice[i]||p.no):p.no;
+    const entry=Object.entries(parts).find(([k,v])=>String(v.no||'').trim()===String(no||'').trim());
+    if(!entry){missing.push(no);return;}
+    const [key,part]=entry;
+    const cur=(part.locs||{})[loc]||0;
+    const nv=cur-qty;
+    upd[`parts/${key}/locs/${loc}`]=nv;
+    upd[`parts/${key}/updatedAt`]=Date.now();
+    addHist('out',key,part.name,`点検出庫(${inspState.machine}/${inspState.type}) ${loc}: ${cur}→${nv}`);
+    count++;
+  });
+  if(count===0&&missing.length>0){toast('❌ 部品が見つかりません: '+missing.join(', '));return;}
+  db.ref().update(upd);
+  if(missing.length>0) toast(`✅ ${count}種出庫完了（未登録: ${missing.join(', ')}）`);
+  else toast(`✅ ${count}種類の部品を出庫しました`);
+  closeOv('ov-insp');
+}
+
+// ===== 点検マスタ編集 =====
+function openInspMaster(){
+  renderInspMaster();
+  open_('ov-insp-master');
+}
+
+function renderInspMaster(){
+  const tmpls=Object.entries(inspTemplates);
+  let html=`<div style="margin-bottom:12px;">
+    <button class="btn btn-primary" onmousedown="event.preventDefault();" onclick="showAddInspForm()">＋ テンプレートを追加</button>
+  </div>
+  <div id="insp-add-form" style="display:none;"></div>`;
+  if(tmpls.length===0){
+    html+='<p style="color:var(--muted);font-size:13px;padding:10px 0;">テンプレートがまだありません</p>';
+  } else {
+    tmpls.forEach(([key,tmpl])=>{
+      const arr=Array.isArray(tmpl.parts)?tmpl.parts:Object.values(tmpl.parts||{});
+      html+=`<div style="border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:8px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+          <div style="font-weight:700;">${esc(tmpl.machine)} ／ ${esc(tmpl.inspType)}</div>
+          <button class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger);"
+            onmousedown="event.preventDefault();" onclick="deleteInspTemplate('${key}')">削除</button>
+        </div>
+        <div style="font-size:11px;color:var(--muted);">
+          ${arr.map(p=>`${esc(p.no||'')}×${p.qty||1}${p.filterChoice?'（カートリッジ選択 / '+esc(p.altNo||'580301')+'）':''}`).join('　')}
+        </div>
+      </div>`;
+    });
+  }
+  id('insp-master-body').innerHTML=html;
+}
+
+function showAddInspForm(){
+  id('insp-add-form').style.display='block';
+  id('insp-add-form').innerHTML=`
+    <div style="background:var(--bg);border-radius:8px;padding:14px;margin-bottom:12px;border:1px solid var(--border);">
+      <div style="font-weight:700;margin-bottom:10px;">新規テンプレート</div>
+      <div class="field" style="margin-bottom:8px;"><label>機種名</label>
+        <input id="im-machine" placeholder="例: ブラック機" style="font-size:14px;" /></div>
+      <div class="field" style="margin-bottom:10px;"><label>点検種別</label>
+        <input id="im-type" placeholder="例: 2年半点検" style="font-size:14px;" /></div>
+      <div style="font-weight:700;font-size:12px;color:var(--muted);margin-bottom:6px;">使用部品リスト</div>
+      <div id="im-parts-list"></div>
+      <button class="btn btn-ghost btn-sm" onmousedown="event.preventDefault();" onclick="addInspPartRow()" style="margin:4px 0 10px;">＋ 部品行を追加</button>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-primary" style="flex:1;" onmousedown="event.preventDefault();" onclick="saveInspTemplate()">保存</button>
+        <button class="btn btn-outline" style="flex:1;" onmousedown="event.preventDefault();" onclick="id('insp-add-form').style.display='none'">キャンセル</button>
+      </div>
+    </div>`;
+  addInspPartRow();
+}
+
+function addInspPartRow(){
+  const list=id('im-parts-list');
+  const div=document.createElement('div');
+  div.style.cssText='display:flex;gap:6px;margin-bottom:6px;align-items:center;flex-wrap:wrap;';
+  div.innerHTML=`<input placeholder="部品番号" style="flex:2;min-width:80px;font-size:13px;" class="im-pno" />
+    <input placeholder="数量" type="number" value="1" min="0" style="width:56px;font-size:13px;" class="im-qty" />
+    <label style="display:flex;align-items:center;gap:3px;font-size:12px;white-space:nowrap;">
+      <input type="checkbox" class="im-fc" />カートリッジ選択</label>
+    <input placeholder="代替番号(例:580301)" style="flex:2;min-width:80px;font-size:12px;display:none;" class="im-alt" />
+    <button class="btn btn-ghost btn-sm" onmousedown="event.preventDefault();" onclick="this.parentNode.remove()">✕</button>`;
+  div.querySelector('.im-fc').addEventListener('change', function(){
+    div.querySelector('.im-alt').style.display=this.checked?'block':'none';
+  });
+  list.appendChild(div);
+}
+
+function saveInspTemplate(){
+  const machine=(id('im-machine').value||'').trim();
+  const inspType=(id('im-type').value||'').trim();
+  if(!machine||!inspType){toast('機種名と点検種別を入力してください');return;}
+  const rows=id('im-parts-list').querySelectorAll('div');
+  const partsArr=[];
+  rows.forEach(row=>{
+    const no=(row.querySelector('.im-pno').value||'').trim();
+    const qty=parseInt(row.querySelector('.im-qty').value)||1;
+    const fc=row.querySelector('.im-fc').checked;
+    const alt=(row.querySelector('.im-alt').value||'').trim();
+    if(no) partsArr.push(fc?{no,qty,filterChoice:true,altNo:alt||'580301'}:{no,qty});
+  });
+  if(partsArr.length===0){toast('部品を1つ以上追加してください');return;}
+  db.ref('inspectionTemplates').push({machine,inspType,parts:partsArr});
+  toast('✅ テンプレートを保存しました');
+  id('insp-add-form').style.display='none';
+  setTimeout(renderInspMaster,500);
+}
+
+function deleteInspTemplate(key){
+  if(!confirm('このテンプレートを削除しますか？'))return;
+  db.ref('inspectionTemplates/'+key).remove();
+  toast('削除しました');
+  setTimeout(renderInspMaster,300);
 }
 
 function id(x){return document.getElementById(x);}
