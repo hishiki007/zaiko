@@ -588,6 +588,7 @@ function render(){
       <td><span class="qty-cell ${total===0?'zero':''}">${total}</span></td>
       <td><div class="acts">
         <button class="btn btn-outline btn-sm" onclick="openStock('${r.k}')">在庫変更</button>
+        <button class="btn btn-warning btn-sm" onclick="openTransfer('${r.k}')">↔ 移動</button>
         <button class="btn btn-outline btn-sm" onclick="openPartHist('${r.k}')">📋 履歴</button>
         <button class="btn btn-outline btn-sm" onclick="openEdit('${r.k}')">編集</button>
         <button class="btn btn-sm" style="color:var(--danger);border:1px solid var(--border);background:white;" onclick="delPart('${r.k}','${esc(r.name||'')}')">削除</button>
