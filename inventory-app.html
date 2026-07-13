@@ -1302,7 +1302,9 @@ function renderInspStep(){
   const body=id('insp-body');
   if(!inspState.machine){
     // ステップ1: 機種選択
-    const machines=[...new Set(Object.values(inspTemplates).map(t=>t.machine))].sort();
+    const MACHINE_ORDER=['XTフル','XTブラック','LNGフル','LNGブラック'];
+    const allMachines=[...new Set(Object.values(inspTemplates).map(t=>t.machine))];
+    const machines=allMachines.sort((a,b)=>{const ai=MACHINE_ORDER.indexOf(a),bi=MACHINE_ORDER.indexOf(b);return(ai<0?99:ai)-(bi<0?99:bi);});
     if(machines.length===0){
       body.innerHTML='<p style="color:var(--muted);text-align:center;padding:24px 0;">テンプレート未登録です。<br>「マスタ編集」から追加してください。</p>';
       return;
