@@ -8,7 +8,11 @@ function AddPartScreen() {
   const [qty, setQty] = React.useState(() => Object.fromEntries(LOCS.map((l) => [l, ''])));
   const [error, setError] = React.useState('');
   const [saving, setSaving] = React.useState(false);
-  const connected = window.ZaikoDB.isReady();
+  const [connected, setConnected] = React.useState(window.ZaikoDB.isReady());
+
+  React.useEffect(() => {
+    window.ZaikoDB.init().then((db) => setConnected(!!db));
+  }, []);
 
   function updateQty(loc, val) {
     setQty((prev) => ({ ...prev, [loc]: val }));

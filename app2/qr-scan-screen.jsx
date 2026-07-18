@@ -37,6 +37,7 @@ function QRScanScreen() {
   const [notFound, setNotFound] = React.useState('');
   const [loc, setLoc] = React.useState(window.ZaikoDB.getOperator());
   const [mode, setMode] = React.useState('in');
+  const [toLoc, setToLoc] = React.useState('');
   const [qty, setQty] = React.useState(1);
   const [saving, setSaving] = React.useState(false);
   const [connected, setConnected] = React.useState(window.ZaikoDB.isReady());
@@ -108,12 +109,19 @@ function QRScanScreen() {
   }
 
   var cur = part ? (part.locs[loc] || 0) : 0;
-  const after = mode === 'in' ? cur + qty : cur - qty;
+  const after = mode === 'move' ? cur - qty : mode === 'in' ? cur + qty : cur - qty;
+  const toCur = part && toLoc ? (part.locs[toLoc] || 0) : 0;
 
   async function complete() {
     if (!part) return;
     setSaving(true);
-    if (part.key && connected) { await window.ZaikoDB.adjustStock(part.key, part.name, loc, mode, qty); }
+    if (part.key && connected) {
+      if (mode === 'move') {
+        if (toLoc && toLoc !== loc) { await window.ZaikoDB.transferPart(part.key, part.name, loc, toLoc, qty); }
+      } else {
+        await window.ZaikoDB.adjustStock(part.key, part.name, loc, mode, qty);
+      }
+    }
     window.location.href = '在庫管理 ホーム画面.html';
   }
 
@@ -186,7 +194,25 @@ function QRScanScreen() {
             <div style={{ display: 'flex', gap: 10 }}>
               <Button variant={mode === 'in' ? 'success' : 'outline'} style={{ flex: 1, height: 56, fontSize: 'var(--text-md)' }} onClick={() => setMode('in')}>📥 入庫 ＋</Button>
               <Button variant={mode === 'out' ? 'danger' : 'outline'} style={{ flex: 1, height: 56, fontSize: 'var(--text-md)' }} onClick={() => setMode('out')}>📤 出庫 −</Button>
+              <Button style={{
+                flex: 1, height: 56, fontSize: 'var(--text-md)', fontWeight: 700, border: `2px solid ${mode === 'move' ? 'var(--color-warning)' : 'var(--color-border)'}`,
+                background: mode === 'move' ? '#fff7ed' : '#fff', color: mode === 'move' ? 'var(--color-warning)' : 'var(--color-text)',
+                cursor: 'pointer', borderRadius: 'var(--radius-lg)', fontFamily: 'var(--font-sans)',
+              }} onClick={() => setMode('move')}>↔ 移動</Button>
             </div>
+
+            {mode === 'move' && (
+              <Card>
+                <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--color-text-muted)', marginBottom: 4 }}>移動先</label>
+                <select value={toLoc} onChange={(e) => setToLoc(e.target.value)} style={{
+                  width: '100%', height: 40, borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)',
+                  fontSize: 'var(--text-sm)', fontFamily: 'var(--font-sans)', color: 'var(--color-text)', background: '#fff', padding: '0 8px',
+                }}>
+                  <option value="">選択してください</option>
+                  {LOCS.filter((l) => l !== loc).map((l) => <option key={l} value={l}>{l}</option>)}
+                </select>
+              </Card>
+            )}
 
             <Card>
               <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', fontWeight: 600, marginBottom: 10, textAlign: 'center' }}>数量を入力してください</div>
@@ -196,7 +222,11 @@ function QRScanScreen() {
                 <StepperButton onClick={() => setQty((q) => q + 1)}>＋</StepperButton>
               </div>
               <div style={{ marginTop: 14, background: 'var(--color-bg)', borderRadius: 'var(--radius-md)', padding: 12, fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)', textAlign: 'center' }}>
-                {loc}: {cur} → {after}
+                {mode === 'move' && toLoc ? (
+                  <React.Fragment>{loc}: {cur} → {after}　│　{toLoc}: {toCur} → {toCur + qty}</React.Fragment>
+                ) : (
+                  <React.Fragment>{loc}: {cur} → {after}</React.Fragment>
+                )}
               </div>
             </Card>
           </React.Fragment>
@@ -207,7 +237,7 @@ function QRScanScreen() {
         flex: '0 0 auto', padding: '10px 16px calc(10px + env(safe-area-inset-bottom))',
         background: 'var(--color-surface)', borderTop: '1px solid var(--color-border)', boxShadow: '0 -2px 8px rgba(0,0,0,0.06)',
       }}>
-        <Button variant={mode === 'in' ? 'success' : 'danger'} disabled={!scanned || saving} style={{ width: '100%', height: 56, fontSize: 'var(--text-md)', opacity: scanned ? 1 : 0.5 }} onClick={complete}>
+        <Button variant={mode === 'in' ? 'success' : mode === 'move' ? 'warning' : 'danger'} disabled={!scanned || saving || (mode === 'move' && !toLoc)} style={{ width: '100%', height: 56, fontSize: 'var(--text-md)', opacity: scanned ? 1 : 0.5 }} onClick={complete}>
           {saving ? '処理中…' : '完了'}
         </Button>
       </div>

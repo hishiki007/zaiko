@@ -147,12 +147,19 @@ function InspectionScreen() {
       <div style={{
         flex: '0 0 auto', padding: '10px 16px calc(10px + env(safe-area-inset-bottom))',
         background: 'var(--color-surface)', borderTop: '1px solid var(--color-border)',
-        boxShadow: '0 -2px 8px rgba(0,0,0,0.06)',
+        boxShadow: '0 -2px 8px rgba(0,0,0,0.06)', display: 'flex', gap: 10,
       }}>
+        <Button
+          variant="outline"
+          style={{ flex: 1, height: 56, fontSize: 'var(--text-md)' }}
+          onClick={() => { window.location.href = kit ? `拠点間移動画面.html?from=${encodeURIComponent(loc)}` : '拠点間移動画面.html'; }}
+        >
+          ↔ 部品移動
+        </Button>
         <Button
           disabled={!kit || saving}
           style={{
-            width: '100%', height: 56, fontSize: 'var(--text-md)', fontWeight: 700, border: 'none',
+            flex: 2, height: 56, fontSize: 'var(--text-md)', fontWeight: 700, border: 'none',
             cursor: kit ? 'pointer' : 'default', borderRadius: 'var(--radius-lg)', color: '#fff',
             fontFamily: 'var(--font-sans)', background: 'var(--color-accent-purple)', opacity: kit ? 1 : 0.5,
           }}

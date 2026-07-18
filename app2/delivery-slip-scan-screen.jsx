@@ -20,7 +20,8 @@ function DeliverySlipScanScreen() {
   const [scanning, setScanning] = React.useState(false);
   const [items, setItems] = React.useState(null);
   const [error, setError] = React.useState('');
-  const fileInputRef = React.useRef(null);
+  const cameraInputRef = React.useRef(null);
+  const libraryInputRef = React.useRef(null);
 
   async function handleFile(e) {
     const f = e.target.files[0];
@@ -70,10 +71,10 @@ function DeliverySlipScanScreen() {
       <Header connected title="納品書スキャン" right={<div style={{ display: 'flex', gap: 6 }}><Button variant="ghost" size="sm" onClick={() => history.back()}>‹ 戻る</Button><Button variant="ghost" size="sm" onClick={() => { window.location.href = '在庫管理 ホーム画面.html'; }}>🏠</Button></div>} />
 
       <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: 16, display: 'flex', flexDirection: 'column', gap: 16 }}>
-        <label style={{
+        <div style={{
           display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, padding: image ? 8 : 32,
           border: '2px dashed var(--color-border)', borderRadius: 'var(--radius-lg)', background: 'var(--color-surface)',
-          cursor: 'pointer', overflow: 'hidden',
+          overflow: 'hidden',
         }}>
           {image ? (
             <img src={image} alt="納品書" style={{ maxWidth: '100%', maxHeight: 220, borderRadius: 'var(--radius-md)', objectFit: 'contain' }} />
@@ -83,8 +84,13 @@ function DeliverySlipScanScreen() {
               <span style={{ fontSize: 'var(--text-md)', fontWeight: 600 }}>納品書の写真を選択してください</span>
             </React.Fragment>
           )}
-          <input ref={fileInputRef} type="file" accept="image/*" capture="environment" onChange={handleFile} style={{ display: 'none' }} />
-        </label>
+          <div style={{ display: 'flex', gap: 10, width: '100%' }}>
+            <Button variant="outline" style={{ flex: 1, height: 44 }} onClick={() => cameraInputRef.current && cameraInputRef.current.click()}>📷 写真を撮る</Button>
+            <Button variant="outline" style={{ flex: 1, height: 44 }} onClick={() => libraryInputRef.current && libraryInputRef.current.click()}>🖼 ファイルから選択</Button>
+          </div>
+          <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" onChange={handleFile} style={{ display: 'none' }} />
+          <input ref={libraryInputRef} type="file" accept="image/*" onChange={handleFile} style={{ display: 'none' }} />
+        </div>
 
         <button onClick={() => { window.location.href = '納品書スキャン履歴画面.html'; }} style={{
           alignSelf: 'flex-end', background: 'none', border: 'none', color: 'var(--color-text-muted)',
