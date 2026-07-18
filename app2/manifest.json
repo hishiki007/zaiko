@@ -1,1 +1,1 @@
-{"name":"部品在庫管理","short_name":"部品在庫","start_url":"./在庫管理 ホーム画面.html","display":"standalone","background_color":"#f1f5f9","theme_color":"#2563eb","icons":[{"src":"assets/app-icon.png","sizes":"180x180","type":"image/png"}]}
+{"name":"部品在庫管理","short_name":"部品在庫","start_url":"./在庫管理 ホーム画面.html","display":"standalone","background_color":"#f1f5f9","theme_color":"#2563eb","icons":[{"src":"assets/app-icon.png?v=2","sizes":"180x180","type":"image/png"}]}
