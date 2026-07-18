@@ -46,6 +46,20 @@ function SettingsScreen() {
   const [connected, setConnected] = React.useState(false);
   const [deduping, setDeduping] = React.useState(false);
   const [syncing, setSyncing] = React.useState(false);
+  const [clearing, setClearing] = React.useState(false);
+
+  async function runClearHistory() {
+    if (!window.confirm('全履歴を削除します。この操作は取り消せません。よろしいですか？')) return;
+    setClearing(true);
+    try {
+      await window.ZaikoDB.clearAllHistory();
+      showToast('✅ 履歴を全件削除しました');
+    } catch (e) {
+      showToast('失敗しました: ' + e.message);
+    } finally {
+      setClearing(false);
+    }
+  }
 
   async function runPhotoSync() {
     setSyncing(true);
@@ -110,6 +124,7 @@ function SettingsScreen() {
           <MenuRow icon="📋" label="全履歴を見る" onClick={() => setHistoryOpen(true)} />
           <MenuRow icon="🔍" label="使用ログ検索" onClick={() => { window.location.href = '使用ログ検索画面.html'; }} />
           <MenuRow icon="👤" label="作業者別アクティビティ" onClick={() => { window.location.href = '作業者別アクティビティ画面.html'; }} />
+          <MenuRow icon="🗑" label={clearing ? '削除中…' : '履歴を全件削除'} onClick={runClearHistory} />
         </Card>
 
         <SectionLabel>データ出力</SectionLabel>

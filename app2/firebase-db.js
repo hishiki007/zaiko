@@ -97,6 +97,10 @@ async function subscribeHistory(cb,limit){
   const h=(s)=>{const v=s.val()||{};cb(Object.values(v).sort((a,b)=>b.time-a.time));};
   ref.on('value',h);return ()=>ref.off('value',h);
 }
+async function clearAllHistory(){
+  const d=await init();if(!d)throw new Error('not connected');
+  await d.ref('history').remove();
+}
 async function dedupeParts(){
   const d=await init();if(!d)throw new Error('not connected');
   const snap=await d.ref('parts').once('value');
@@ -114,5 +118,5 @@ async function dedupeParts(){
   for(const key of toRemove){await d.ref('parts/'+key).remove();}
   return toRemove.length;
 }
-window.ZaikoDB={LOCS:['シンワ倉庫','アラン','ゆーや','しゅん','たくや'],getConfig,saveConfig,clearConfig,init,isReady,getOperator,setOperator,subscribeParts,subscribePart,addPart,updatePart,deletePart,adjustStock,transferPart,addHistory,subscribeHistory,dedupeParts,setPhoto};
+window.ZaikoDB={LOCS:['シンワ倉庫','アラン','ゆーや','しゅん','たくや'],getConfig,saveConfig,clearConfig,init,isReady,getOperator,setOperator,subscribeParts,subscribePart,addPart,updatePart,deletePart,adjustStock,transferPart,addHistory,subscribeHistory,dedupeParts,setPhoto,clearAllHistory};
 })();
