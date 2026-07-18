@@ -1,0 +1,37 @@
+/* ============================================================
+   Melitta Zaiko — Spacing, radius & elevation tokens
+   ============================================================ */
+:root {
+  /* Spacing scale (px values actually seen in source) */
+  --space-1: 4px;
+  --space-2: 5px;
+  --space-3: 6px;
+  --space-4: 8px;
+  --space-5: 10px;
+  --space-6: 12px;
+  --space-7: 14px;
+  --space-8: 16px;
+  --space-9: 20px;
+  --space-10: 24px;
+  --space-11: 40px;
+
+  /* Radius scale */
+  --radius-sm: 6px;      /* thumbnails */
+  --radius-md: 8px;      /* buttons, inputs */
+  --radius-lg: 10px;     /* table, photo dropzone */
+  --radius-xl: 12px;     /* cards, modals */
+  --radius-pill: 999px;  /* chips, badges, toast */
+
+  /* Elevation (box-shadow) */
+  --shadow-header: 0 2px 8px rgba(0, 0, 0, 0.2);
+  --shadow-card: 0 2px 12px rgba(0, 0, 0, 0.08);
+  --shadow-table: 0 1px 4px rgba(0, 0, 0, 0.06);
+  --shadow-modal: 0 20px 60px rgba(0, 0, 0, 0.25);
+  --shadow-glow-success: 0 0 6px var(--green-200, #86efac);
+
+  /* Motion */
+  --ease-standard: ease; /* @kind other */
+  --duration-fast: 0.15s; /* @kind other */
+  --duration-base: 0.2s; /* @kind other */
+  --duration-slow: 0.3s; /* @kind other */
+}
