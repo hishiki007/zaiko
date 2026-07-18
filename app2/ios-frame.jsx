@@ -203,6 +203,24 @@ function IOSDevice({
   children, width = 402, height = 874, dark = false,
   title, keyboard = false,
 }) {
+  const isStandalone = typeof window !== 'undefined' && (
+    window.matchMedia && window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone
+  );
+
+  if (isStandalone) {
+    return (
+      <div style={{
+        width: '100%', height: '100%', position: 'relative', background: dark ? '#000' : '#F2F2F7',
+        fontFamily: '-apple-system, system-ui, sans-serif', WebkitFontSmoothing: 'antialiased',
+        display: 'flex', flexDirection: 'column',
+      }}>
+        {title !== undefined && <IOSNavBar title={title} dark={dark} />}
+        <div style={{ flex: 1, overflow: 'auto' }}>{children}</div>
+        {keyboard && <IOSKeyboard dark={dark} />}
+      </div>
+    );
+  }
+
   return (
     <div style={{
       width, height, borderRadius: 48, overflow: 'hidden',
