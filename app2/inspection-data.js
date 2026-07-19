@@ -43,8 +43,24 @@ const DEFAULT_TEMPLATES=[...expand('XTフル',XT_FULL_RULES),...expand('XTブラ
 function loadTemplates(){
   try{ const saved=JSON.parse(localStorage.getItem('inspTemplates')); return saved && saved.length ? saved : DEFAULT_TEMPLATES; }catch(e){ return DEFAULT_TEMPLATES; }
 }
-function persistTemplates(t){ localStorage.setItem('inspTemplates', JSON.stringify(t)); }
-function resetTemplates(){ localStorage.removeItem('inspTemplates'); }
+function persistTemplates(t){
+  localStorage.setItem('inspTemplates', JSON.stringify(t));
+  if(window.ZaikoDB && window.ZaikoDB.isReady()){ window.ZaikoDB.saveInspTemplates(t).catch(()=>{}); }
+}
+function resetTemplates(){
+  localStorage.removeItem('inspTemplates');
+  if(window.ZaikoDB && window.ZaikoDB.isReady()){ window.ZaikoDB.saveInspTemplates(DEFAULT_TEMPLATES).catch(()=>{}); }
+}
+function subscribeTemplates(cb){
+  if(!(window.ZaikoDB && window.ZaikoDB.subscribeInspTemplates)){ cb(loadTemplates()); return Promise.resolve(()=>{}); }
+  return window.ZaikoDB.subscribeInspTemplates((list)=>{
+    if(list && list.length){ localStorage.setItem('inspTemplates', JSON.stringify(list)); cb(list); }
+    else {
+      window.ZaikoDB.seedInspTemplatesIfEmpty(loadTemplates()).catch(()=>{});
+      cb(loadTemplates());
+    }
+  });
+}
 
-window.InspData={ TYPES, DEFAULT_TEMPLATES, loadTemplates, persistTemplates, resetTemplates };
+window.InspData={ TYPES, DEFAULT_TEMPLATES, loadTemplates, persistTemplates, resetTemplates, subscribeTemplates };
 })();

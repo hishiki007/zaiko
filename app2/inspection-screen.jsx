@@ -1,7 +1,12 @@
 const { Header, Card, Button } = window.MelittaZaikoDesignSystem_3f29a9;
 
 function InspectionScreen() {
-  const [allTemplates] = React.useState(window.InspData.loadTemplates);
+  const [allTemplates, setAllTemplates] = React.useState(window.InspData.loadTemplates);
+  React.useEffect(() => {
+    let unsub = () => {};
+    window.InspData.subscribeTemplates((list) => setAllTemplates(list)).then((u) => { unsub = u; });
+    return () => unsub();
+  }, []);
   const MACHINES = [...new Set(allTemplates.map((t) => t.machine))];
   const [machine, setMachine] = React.useState(null);
   const [type, setType] = React.useState(null);

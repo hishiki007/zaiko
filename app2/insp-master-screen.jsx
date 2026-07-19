@@ -4,6 +4,11 @@ function emptyRow() { return { no: '', name: '', qty: 1 }; }
 
 function InspMasterScreen() {
   const [templates, setTemplates] = React.useState(window.InspData.loadTemplates);
+  React.useEffect(() => {
+    let unsub = () => {};
+    window.InspData.subscribeTemplates((list) => setTemplates(list)).then((u) => { unsub = u; });
+    return () => unsub();
+  }, []);
   const MACHINE_GROUPS = [...new Set(templates.map((t) => t.machine))];
   const [showForm, setShowForm] = React.useState(false);
   const [editingId, setEditingId] = React.useState(null);
