@@ -24,7 +24,7 @@ function InspectionScreen() {
   const typesForMachine = machine ? allTemplates.filter((t) => t.machine === machine) : [];
 
   function selectMachine(m) { setMachine(m); setType(null); setKit(null); }
-  function selectType(t) { setType(t.inspType); setKit(t.parts.map((i) => ({ ...i, choice: i.altNo ? i.no : undefined }))); }
+  function selectType(t) { setType(t.inspType); setKit(t.parts.map((i) => ({ ...i, choice: i.altNo ? i.no : undefined, name: (parts && parts.find((p) => p.no === i.no) || {}).name }))); }
   function updateQty(idx, qty) { setKit((prev) => prev.map((it, i) => (i === idx ? { ...it, qty } : it))); }
   function setChoice(idx, code) { setKit((prev) => prev.map((it, i) => (i === idx ? { ...it, choice: code } : it))); }
 
@@ -154,19 +154,33 @@ function InspectionScreen() {
       }}>
         <Button
           variant="outline"
+          disabled={!kit || saving}
           style={{ flex: 1, height: 56, fontSize: 'var(--text-md)' }}
-          onClick={() => {
-            let qs = 'from=' + encodeURIComponent('シンワ倉庫');
-            if (kit && kit.length && parts) {
-              const first = kit[0];
-              const code = first.choice || first.no;
-              const match = code ? parts.find((p) => p.no === code) : parts.find((p) => p.name === first.name);
-              if (match) qs += '&key=' + encodeURIComponent(match.key);
+          onClick={async () => {
+            if (!kit) return;
+            const operator = window.ZaikoDB.getOperator();
+            if (operator === 'シンワ倉庫') { setError('作業者がシンワ倉庫のため、移動先を別途選んでください'); return; }
+            if (!window.confirm(`シンワ倉庫 → ${operator} へ部品を移動します。よろしいですか？`)) return;
+            setError('');
+            if (connected && parts) {
+              for (const item of kit) {
+                const code = item.choice || item.no;
+                const match = code ? parts.find((p) => p.no === code) : parts.find((p) => p.name === item.name);
+                if (match && item.qty > (match.locs['シンワ倉庫'] || 0)) { setError(`${code || item.name}: シンワ倉庫の在庫が不足しています（残り${match.locs['シンワ倉庫'] || 0}）`); return; }
+              }
             }
-            window.location.href = `拠点間移動画面.html?${qs}`;
+            setSaving(true);
+            if (connected && parts) {
+              for (const item of kit) {
+                const code = item.choice || item.no;
+                const match = code ? parts.find((p) => p.no === code) : parts.find((p) => p.name === item.name);
+                if (match && item.qty > 0) { await window.ZaikoDB.transferPart(match.key, match.name, 'シンワ倉庫', operator, item.qty); }
+              }
+            }
+            window.location.href = '在庫管理 ホーム画面.html';
           }}
         >
-          ↔ 部品移動を実行
+          ↔ 部品移動を実行（→{window.ZaikoDB.getOperator()}）
         </Button>
         <Button
           disabled={!kit || saving}
@@ -182,7 +196,8 @@ function InspectionScreen() {
               for (const item of kit) {
                 const code = item.choice || item.no;
                 const match = code ? parts.find((p) => p.no === code) : parts.find((p) => p.name === item.name);
-                if (match && item.qty > (match.locs[loc] || 0)) { setError(`${code || item.name}: ${loc}の在庫が不足しています（残り${match.locs[loc] || 0}）`); return; }
+                if (!match) { setError(`${code || item.name}: 在庫データに見つかりません（部品番号が一致しない可能性、CSVインポートをご確認ください）`); return; }
+                if (item.qty > (match.locs[loc] || 0)) { setError(`${code || item.name}: ${loc}の在庫が不足しています（残り${match.locs[loc] || 0}）`); return; }
               }
             }
             setSaving(true);
