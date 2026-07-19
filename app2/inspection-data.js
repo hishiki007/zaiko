@@ -41,6 +41,24 @@ const LNG_BLACK_PLACEHOLDER=[
 
 const DEFAULT_TEMPLATES=[...expand('XTフル',XT_FULL_RULES),...expand('XTブラック',XT_BLACK_RULES),...LNG_FULL_PLACEHOLDER,...LNG_BLACK_PLACEHOLDER];
 
+function patchXtBlack27313(list){
+  let changed=false;
+  const next=list.map((t)=>{
+    if(t.machine!=='XTブラック')return t;
+    if(t.parts.some((p)=>p.no==='27313'))return t;
+    changed=true;
+    return {...t, parts:[{no:'27313',qty:1}, ...t.parts]};
+  });
+  return changed ? next : null;
+}
+function patchXtOrder(list){
+  const MACHINE_ORDER=['XTフル','XTブラック','LNGフル','LNGブラック'];
+  const grouped=MACHINE_ORDER.flatMap((m)=>list.filter((t)=>t.machine===m).slice().sort((a,b)=>TYPES.indexOf(a.inspType)-TYPES.indexOf(b.inspType)));
+  const rest=list.filter((t)=>!MACHINE_ORDER.includes(t.machine));
+  const next=[...grouped, ...rest];
+  const changed=JSON.stringify(next.map((t)=>t.id))!==JSON.stringify(list.map((t)=>t.id));
+  return changed ? next : null;
+}
 function loadTemplates(){
   try{ const saved=JSON.parse(localStorage.getItem('inspTemplates')); return saved && saved.length ? saved : DEFAULT_TEMPLATES; }catch(e){ return DEFAULT_TEMPLATES; }
 }
@@ -53,12 +71,20 @@ function resetTemplates(){
   if(window.ZaikoDB && window.ZaikoDB.isReady()){ window.ZaikoDB.saveInspTemplates(DEFAULT_TEMPLATES).catch(()=>{}); }
 }
 function subscribeTemplates(cb){
-  if(!(window.ZaikoDB && window.ZaikoDB.subscribeInspTemplates)){ cb(loadTemplates()); return Promise.resolve(()=>{}); }
+  function handle(list){
+    const patchedParts=patchXtBlack27313(list);
+    const afterParts=patchedParts || list;
+    const patchedOrder=patchXtOrder(afterParts);
+    const final=patchedOrder || afterParts;
+    if(patchedParts || patchedOrder){ persistTemplates(final); }
+    cb(final);
+  }
+  if(!(window.ZaikoDB && window.ZaikoDB.subscribeInspTemplates)){ handle(loadTemplates()); return Promise.resolve(()=>{}); }
   return window.ZaikoDB.subscribeInspTemplates((list)=>{
-    if(list && list.length){ localStorage.setItem('inspTemplates', JSON.stringify(list)); cb(list); }
+    if(list && list.length){ localStorage.setItem('inspTemplates', JSON.stringify(list)); handle(list); }
     else {
       window.ZaikoDB.seedInspTemplatesIfEmpty(loadTemplates()).catch(()=>{});
-      cb(loadTemplates());
+      handle(loadTemplates());
     }
   });
 }
