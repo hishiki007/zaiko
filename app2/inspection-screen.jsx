@@ -114,7 +114,10 @@ function InspectionScreen() {
                   display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px',
                   borderBottom: i < kit.length - 1 ? '1px solid var(--color-border)' : 'none', flexWrap: 'wrap',
                 }}>
-                  <span style={{ flex: 1, fontSize: 'var(--text-md)', fontWeight: 600, fontFamily: it.no ? 'var(--font-mono)' : 'var(--font-sans)' }}>{it.no || it.name}</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 'var(--text-md)', fontWeight: 600, fontFamily: it.no ? 'var(--font-mono)' : 'var(--font-sans)' }}>{it.no || it.name}</div>
+                    {it.no && it.name && <div style={{ fontSize: 'var(--text-2xs)', color: 'var(--color-text-muted)' }}>{it.name}</div>}
+                  </div>
                   {it.altNo && (
                     <div style={{ display: 'flex', gap: 6 }}>
                       {[it.no, it.altNo].map((code) => (

@@ -155,8 +155,14 @@ function DeliverySlipScanScreen() {
                   borderBottom: i < items.length - 1 ? '1px solid var(--color-border)' : 'none',
                 }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    {it.no && <div style={{ fontSize: 'var(--text-2xs)', color: 'var(--color-text-muted)', fontFamily: 'var(--font-mono)' }}>{it.no}</div>}
-                    <div style={{ fontSize: 'var(--text-md)', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{it.name || '（品目名不明）'}</div>
+                    {it.no ? (
+                      <React.Fragment>
+                        <div style={{ fontSize: 'var(--text-md)', fontWeight: 700, fontFamily: 'var(--font-mono)' }}>{it.no}</div>
+                        {it.name && <div style={{ fontSize: 'var(--text-2xs)', color: 'var(--color-text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{it.name}</div>}
+                      </React.Fragment>
+                    ) : (
+                      <div style={{ fontSize: 'var(--text-md)', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{it.name || '（品目名不明）'}</div>
+                    )}
                   </div>
                   <Badge kind="success">📥 入庫</Badge>
                   <input
