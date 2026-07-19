@@ -1,6 +1,6 @@
 const { Header, Card, Button, Field } = window.MelittaZaikoDesignSystem_3f29a9;
 
-function emptyRow() { return { name: '', qty: 1 }; }
+function emptyRow() { return { no: '', name: '', qty: 1 }; }
 
 function InspMasterScreen() {
   const [templates, setTemplates] = React.useState(window.InspData.loadTemplates);
@@ -22,7 +22,7 @@ function InspMasterScreen() {
 
   function save() {
     if (!machine.trim() || !inspType.trim()) { setError('機種名と点検種別を入力してください'); return; }
-    const partsArr = rows.filter((r) => r.name.trim()).map((r) => ({ name: r.name.trim(), qty: Number(r.qty) || 1 }));
+    const partsArr = rows.filter((r) => r.no.trim() || r.name.trim()).map((r) => ({ no: r.no.trim(), name: r.name.trim(), qty: Number(r.qty) || 1 }));
     if (partsArr.length === 0) { setError('部品を1つ以上追加してください'); return; }
     setTemplates((prev) => {
       const next = [...prev, { id: Date.now(), machine: machine.trim(), inspType: inspType.trim(), parts: partsArr }];
@@ -63,12 +63,14 @@ function InspMasterScreen() {
             <div style={{ fontWeight: 700, marginBottom: 10 }}>新規テンプレート</div>
             <Field label="機種名" value={machine} onChange={(e) => setMachine(e.target.value)} placeholder="例: ブラック機" />
             <Field label="点検種別" value={inspType} onChange={(e) => setInspType(e.target.value)} placeholder="例: 2年半点検" />
-            <div style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--color-text-muted)', marginBottom: 6 }}>使用部品リスト（部品名で指定）</div>
+            <div style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--color-text-muted)', marginBottom: 6 }}>使用部品リスト（部品番号を推奨、名称のみでも可）</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 8 }}>
               {rows.map((r, i) => (
                 <div key={i} style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
-                  <input placeholder="部品名（例: パッキン一式）" value={r.name} onChange={(e) => updateRow(i, { name: e.target.value })}
-                    style={{ flex: 2, minWidth: 90, height: 38, fontSize: 'var(--text-sm)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', padding: '0 8px', fontFamily: 'var(--font-sans)' }} />
+                  <input placeholder="部品番号（例: 27313）" value={r.no} onChange={(e) => updateRow(i, { no: e.target.value })}
+                    style={{ flex: 1, minWidth: 90, height: 38, fontSize: 'var(--text-sm)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', padding: '0 8px', fontFamily: 'var(--font-mono)' }} />
+                  <input placeholder="部品名（任意）" value={r.name} onChange={(e) => updateRow(i, { name: e.target.value })}
+                    style={{ flex: 1, minWidth: 90, height: 38, fontSize: 'var(--text-sm)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', padding: '0 8px', fontFamily: 'var(--font-sans)' }} />
                   <input placeholder="数量" type="number" value={r.qty} onChange={(e) => updateRow(i, { qty: e.target.value })}
                     style={{ width: 60, height: 38, fontSize: 'var(--text-sm)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', padding: '0 8px', fontFamily: 'var(--font-sans)' }} />
                   <button onClick={() => removeRow(i)} style={{ background: 'none', border: 'none', color: 'var(--color-text-muted)', fontSize: 16, cursor: 'pointer' }}>✕</button>
