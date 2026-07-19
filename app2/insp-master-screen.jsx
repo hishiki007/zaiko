@@ -4,6 +4,7 @@ function emptyRow() { return { no: '', name: '', qty: 1 }; }
 
 function InspMasterScreen() {
   const [templates, setTemplates] = React.useState(window.InspData.loadTemplates);
+  const MACHINE_GROUPS = [...new Set(templates.map((t) => t.machine))];
   const [showForm, setShowForm] = React.useState(false);
   const [machine, setMachine] = React.useState('');
   const [inspType, setInspType] = React.useState('');
@@ -44,6 +45,20 @@ function InspMasterScreen() {
     window.InspData.resetTemplates();
     setTemplates(window.InspData.loadTemplates());
   }
+  function move(id, dir) {
+    setTemplates((prev) => {
+      const idx = prev.findIndex((t) => t.id === id);
+      const machineGroup = prev.map((t, i) => ({ t, i })).filter((x) => x.t.machine === prev[idx].machine);
+      const posInGroup = machineGroup.findIndex((x) => x.t.id === id);
+      const swapWith = machineGroup[posInGroup + dir];
+      if (!swapWith) return prev;
+      const next = prev.slice();
+      const a = idx, b = swapWith.i;
+      [next[a], next[b]] = [next[b], next[a]];
+      window.InspData.persistTemplates(next);
+      return next;
+    });
+  }
 
   return (
     <div style={{
@@ -55,7 +70,6 @@ function InspMasterScreen() {
       <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
         <div style={{ display: 'flex', gap: 8 }}>
           <Button variant="primary" style={{ flex: 1, height: 48 }} onClick={openAdd}>＋ テンプレートを追加</Button>
-          <Button variant="outline" style={{ height: 48 }} onClick={resetAll}>初期データに戻す</Button>
         </div>
 
         {showForm && (
@@ -89,21 +103,27 @@ function InspMasterScreen() {
         <div style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: 'var(--letter-spacing-label)' }}>
           テンプレート一覧
         </div>
-        {templates.length === 0 && (
-          <div style={{ color: 'var(--color-text-muted)', fontSize: 'var(--text-sm)', padding: '10px 0' }}>テンプレートがまだありません</div>
-        )}
-        {templates.map((t) => (
-          <Card key={t.id} padding={12}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-              <div style={{ fontWeight: 700 }}>{t.machine} ／ {t.inspType}</div>
-              <Button variant="outline" size="sm" style={{ color: 'var(--color-danger)', borderColor: 'var(--color-danger)' }} onClick={() => del(t.id)}>削除</Button>
-            </div>
-            <div style={{ fontSize: 'var(--text-2xs)', color: 'var(--color-text-muted)' }}>
-              {t.parts.map((p, i) => (
-                <span key={i}>{p.no || p.name}×{p.qty}{p.altNo ? `（${p.altNo}と選択）` : ''}{i < t.parts.length - 1 ? '　' : ''}</span>
-              ))}
-            </div>
-          </Card>
+        {MACHINE_GROUPS.map((m) => (
+          <React.Fragment key={m}>
+            <div style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: 'var(--letter-spacing-label)' }}>{m}</div>
+            {templates.filter((t) => t.machine === m).map((t, i, arr) => (
+              <Card key={t.id} padding={12}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                  <div style={{ fontWeight: 700 }}>{t.inspType}</div>
+                  <div style={{ display: 'flex', gap: 4 }}>
+                    <button onClick={() => move(t.id, -1)} disabled={i === 0} style={{ width: 32, height: 32, borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', background: '#fff', color: 'var(--color-text)', cursor: i === 0 ? 'default' : 'pointer', opacity: i === 0 ? 0.3 : 1, fontSize: 14 }}>▲</button>
+                    <button onClick={() => move(t.id, 1)} disabled={i === arr.length - 1} style={{ width: 32, height: 32, borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', background: '#fff', color: 'var(--color-text)', cursor: i === arr.length - 1 ? 'default' : 'pointer', opacity: i === arr.length - 1 ? 0.3 : 1, fontSize: 14 }}>▼</button>
+                    <Button variant="outline" size="sm" style={{ color: 'var(--color-danger)', borderColor: 'var(--color-danger)' }} onClick={() => del(t.id)}>削除</Button>
+                  </div>
+                </div>
+                <div style={{ fontSize: 'var(--text-2xs)', color: 'var(--color-text-muted)' }}>
+                  {t.parts.map((p, pi) => (
+                    <span key={pi}>{p.no || p.name}×{p.qty}{p.altNo ? `（${p.altNo}と選択）` : ''}{pi < t.parts.length - 1 ? '　' : ''}</span>
+                  ))}
+                </div>
+              </Card>
+            ))}
+          </React.Fragment>
         ))}
       </div>
     </div>

@@ -85,6 +85,12 @@ function SettingsScreen() {
     }
   }
 
+  async function runResetInspTemplates() {
+    if (!window.confirm('点検マスタ(機種・点検種別・部品構成)を初期データに戻します。追加・削除・並べ替えした内容は失われます。よろしいですか？')) return;
+    window.InspData.resetTemplates();
+    showToast('✅ 点検マスタを初期データに戻しました');
+  }
+
   React.useEffect(() => {
     let unsub = () => {};
     window.ZaikoDB.subscribeHistory((all) => {
@@ -117,6 +123,7 @@ function SettingsScreen() {
           <MenuRow icon="📋" label="棚卸し" onClick={() => { window.location.href = '棚卸し画面.html'; }} />
           <MenuRow icon="🧹" label={deduping ? '重複を確認中…' : '重複部品を統合'} onClick={runDedupe} />
           <MenuRow icon="📷" label={syncing ? '写真を紐付け中…' : '写真を部品番号で一括紐付け'} onClick={runPhotoSync} />
+          <MenuRow icon="🔧" label="点検マスタを初期データに戻す" onClick={runResetInspTemplates} />
         </Card>
 
         <SectionLabel>履歴</SectionLabel>

@@ -22,10 +22,7 @@ function InspectionScreen() {
     return () => unsub();
   }, []);
 
-  const typesForMachine = machine ? allTemplates.filter((t) => t.machine === machine).slice().sort((a, b) => {
-    const ia = window.InspData.TYPES.indexOf(a.inspType); const ib = window.InspData.TYPES.indexOf(b.inspType);
-    return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib);
-  }) : [];
+  const typesForMachine = machine ? allTemplates.filter((t) => t.machine === machine) : [];
 
   function selectMachine(m) { setMachine(m); setType(null); }
   function mergeAll(list) {
