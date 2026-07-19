@@ -92,8 +92,6 @@ function HomeScreen() {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 20 }}>
           <ActionButton icon="📱" label="QRスキャン" color="green" onClick={() => { window.location.href = 'QRスキャン画面.html'; }} />
           <ActionButton icon="📷" label="納品書スキャン" color="green" onClick={() => { window.location.href = '納品書スキャン画面.html'; }} />
-          <ActionButton icon="✏️" label="在庫変更" onClick={() => { window.location.href = '在庫変更画面.html'; }} />
-          <ActionButton icon={<span style={{ color: 'var(--color-text)' }}>↔</span>} label="移動" color="orange" onClick={() => { window.location.href = '拠点間移動画面.html'; }} />
           <ActionButton icon="🔧" label="点検" color="purple" onClick={() => { window.location.href = '点検画面.html'; }} />
           <ActionButton icon="＋" label="部品追加" color="blue" onClick={() => { window.location.href = '部品追加画面.html'; }} />
         </div>

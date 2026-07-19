@@ -152,9 +152,18 @@ function InspectionScreen() {
         <Button
           variant="outline"
           style={{ flex: 1, height: 56, fontSize: 'var(--text-md)' }}
-          onClick={() => { window.location.href = kit ? `拠点間移動画面.html?from=${encodeURIComponent(loc)}` : '拠点間移動画面.html'; }}
+          onClick={() => {
+            let qs = 'from=' + encodeURIComponent('シンワ倉庫');
+            if (kit && kit.length && parts) {
+              const first = kit[0];
+              const code = first.choice || first.no;
+              const match = code ? parts.find((p) => p.no === code) : parts.find((p) => p.name === first.name);
+              if (match) qs += '&key=' + encodeURIComponent(match.key);
+            }
+            window.location.href = `拠点間移動画面.html?${qs}`;
+          }}
         >
-          ↔ 部品移動
+          ↔ 部品移動を実行
         </Button>
         <Button
           disabled={!kit || saving}

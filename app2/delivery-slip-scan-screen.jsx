@@ -29,6 +29,10 @@ function DeliverySlipScanScreen() {
     setError(''); setItems(null);
     const dataUrl = await fileToBase64(f);
     setImage(dataUrl);
+    if (!window.claude || !window.claude.complete) {
+      setError('AI解析が利用できません（window.claude未接続）');
+      return;
+    }
     setScanning(true);
     try {
       const mimeType = dataUrl.substring(5, dataUrl.indexOf(';'));
