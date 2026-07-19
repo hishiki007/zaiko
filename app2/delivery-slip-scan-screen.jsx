@@ -51,12 +51,12 @@ function DeliverySlipScanScreen() {
           body: JSON.stringify({
             model: 'claude-haiku-4-5',
             max_tokens: 1024,
-            system: 'あなたは日本語の納品書・仕入れ伝票の画像を解析するアシスタントです。画像に写っている品目名と数量を抽出し、必ずJSON配列のみを出力してください。説明文やマークダウンのコードフェンスは付けないでください。形式: [{"name":"部品名","qty":数量}]',
+            system: 'あなたは日本語の納品書・仕入れ伝票の画像を解析するアシスタントです。画像に写っている商品コード（部品番号）・品目名・数量を抽出し、必ずJSON配列のみを出力してください。説明文やマークダウンのコードフェンスは付けないでください。形式: [{"no":"商品コード","name":"部品名","qty":数量}]。商品コードが読み取れない場合は""にしてください。',
             messages: [{
               role: 'user',
               content: [
                 { type: 'image', source: { type: 'base64', media_type: mimeType, data: base64Data } },
-                { type: 'text', text: '添付の納品書画像から、品目名と数量の一覧をJSON配列で抽出してください。' },
+                { type: 'text', text: '添付の納品書画像から、商品コード（部品番号）・品目名・数量の一覧をJSON配列で抽出してください。商品コードは特に正確に読み取ってください。' },
               ],
             }],
           }),
@@ -69,19 +69,19 @@ function DeliverySlipScanScreen() {
         res = (json.content || []).map((c) => c.text || '').join('');
       } else {
         res = await window.claude.complete({
-          system: 'あなたは日本語の納品書・仕入れ伝票の画像を解析するアシスタントです。画像に写っている品目名と数量を抽出し、必ずJSON配列のみを出力してください。説明文やマークダウンのコードフェンスは付けないでください。形式: [{"name":"部品名","qty":数量}]',
+          system: 'あなたは日本語の納品書・仕入れ伝票の画像を解析するアシスタントです。画像に写っている商品コード（部品番号）・品目名・数量を抽出し、必ずJSON配列のみを出力してください。説明文やマークダウンのコードフェンスは付けないでください。形式: [{"no":"商品コード","name":"部品名","qty":数量}]。商品コードが読み取れない場合は""にしてください。',
           messages: [{
             role: 'user',
             content: [
               { type: 'image', source: { type: 'base64', media_type: mimeType, data: base64Data } },
-              { type: 'text', text: '添付の納品書画像から、品目名と数量の一覧をJSON配列で抽出してください。' },
+              { type: 'text', text: '添付の納品書画像から、商品コード（部品番号）・品目名・数量の一覧をJSON配列で抽出してください。商品コードは特に正確に読み取ってください。' },
             ],
           }],
           max_tokens: 1024,
         });
       }
       const parsed = extractJSON(res);
-      setItems(parsed.map((p) => ({ name: String(p.name || '').trim(), qty: Number(p.qty) || 1 })).filter((p) => p.name));
+      setItems(parsed.map((p) => ({ no: String(p.no || '').trim(), name: String(p.name || '').trim(), qty: Number(p.qty) || 1 })).filter((p) => p.name || p.no));
       if (!parsed.length) setError('品目が検出されませんでした');
     } catch (err) {
       setError('解析に失敗しました: ' + err.message);
@@ -154,7 +154,10 @@ function DeliverySlipScanScreen() {
                   display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px',
                   borderBottom: i < items.length - 1 ? '1px solid var(--color-border)' : 'none',
                 }}>
-                  <div style={{ flex: 1, minWidth: 0, fontSize: 'var(--text-md)', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{it.name}</div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    {it.no && <div style={{ fontSize: 'var(--text-2xs)', color: 'var(--color-text-muted)', fontFamily: 'var(--font-mono)' }}>{it.no}</div>}
+                    <div style={{ fontSize: 'var(--text-md)', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{it.name || '（品目名不明）'}</div>
+                  </div>
                   <Badge kind="success">📥 入庫</Badge>
                   <input
                     type="number" value={it.qty} onChange={(e) => updateQty(i, Number(e.target.value))}

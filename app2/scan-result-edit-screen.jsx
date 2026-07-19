@@ -4,9 +4,9 @@ function loadScanItems() {
   try {
     const saved = JSON.parse(localStorage.getItem('deliverySlipItems'));
     return saved && saved.length ? saved : [
-      { name: 'A600バルブユニット', qty: 3 },
-      { name: 'パッキン一式', qty: 10 },
-      { name: 'クリーニングタブレット', qty: 2 },
+      { no: '', name: 'A600バルブユニット', qty: 3 },
+      { no: '', name: 'パッキン一式', qty: 10 },
+      { no: '', name: 'クリーニングタブレット', qty: 2 },
     ];
   } catch (e) {
     return [];
@@ -28,8 +28,8 @@ function ScanResultEditScreen() {
       const list = data ? Object.entries(data).map(([key, p]) => ({ key, no: p.no || '', name: p.name })) : [];
       setAllParts(list);
       setItems(rawItems.map((it, idx) => {
-        const match = list.find((p) => p.name === it.name);
-        return { id: idx, name: it.name, no: match ? match.no : '', qty: it.qty, matched: !!match, key: match ? match.key : null, checked: true };
+        const match = (it.no && list.find((p) => p.no === it.no)) || list.find((p) => p.name === it.name);
+        return { id: idx, name: it.name, no: match ? match.no : (it.no || ''), qty: it.qty, matched: !!match, key: match ? match.key : null, checked: true };
       }));
     }).then((u) => { unsub = u; });
     return () => unsub();
