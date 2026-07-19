@@ -17,6 +17,31 @@ function InspectionScreen() {
   const [error, setError] = React.useState('');
   const [connected, setConnected] = React.useState(window.ZaikoDB.isReady());
   const [parts, setParts] = React.useState(null);
+  const draftLoaded = React.useRef(false);
+
+  React.useEffect(() => {
+    try {
+      const raw = localStorage.getItem('inspection_draft');
+      if (raw) {
+        const d = JSON.parse(raw);
+        if (d && d.prepared && d.prepared.length) {
+          setPrepared(d.prepared);
+          setKit(mergeAll(d.prepared));
+          if (d.loc) setLoc(d.loc);
+        }
+      }
+    } catch (e) {}
+    draftLoaded.current = true;
+  }, []);
+
+  React.useEffect(() => {
+    if (!draftLoaded.current) return;
+    if (prepared.length) {
+      localStorage.setItem('inspection_draft', JSON.stringify({ prepared, loc }));
+    } else {
+      localStorage.removeItem('inspection_draft');
+    }
+  }, [prepared, loc]);
 
   React.useEffect(() => {
     let unsub = () => {};
@@ -59,7 +84,7 @@ function InspectionScreen() {
       return next;
     });
   }
-  function clearAll() { setPrepared([]); setKit(null); setMachine(null); setType(null); setError(''); }
+  function clearAll() { setPrepared([]); setKit(null); setMachine(null); setType(null); setError(''); localStorage.removeItem('inspection_draft'); }
   function updateQty(idx, qty) { setKit((prev) => prev.map((it, i) => (i === idx ? { ...it, qty } : it))); }
   function setChoice(idx, code) { setKit((prev) => prev.map((it, i) => (i === idx ? { ...it, choice: code } : it))); }
 
@@ -251,6 +276,7 @@ function InspectionScreen() {
                 if (match && item.qty > 0) { await window.ZaikoDB.transferPart(match.key, match.name, 'シンワ倉庫', operator, item.qty); }
               }
             }
+            localStorage.removeItem('inspection_draft');
             window.location.href = '在庫管理 ホーム画面.html';
           }}
         >
@@ -282,6 +308,7 @@ function InspectionScreen() {
                 if (match && item.qty > 0) { await window.ZaikoDB.adjustStock(match.key, match.name, loc, 'out', item.qty); }
               }
             }
+            localStorage.removeItem('inspection_draft');
             window.location.href = '在庫管理 ホーム画面.html';
           }}
         >
