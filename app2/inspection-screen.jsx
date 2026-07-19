@@ -22,7 +22,7 @@ function InspectionScreen() {
     return () => unsub();
   }, []);
 
-  const typesForMachine = machine ? allTemplates.filter((t) => t.machine === machine) : [];
+  const typesForMachine = machine ? allTemplates.filter((t) => t.machine === machine).slice().sort((a, b) => window.InspData.TYPES.indexOf(a.inspType) - window.InspData.TYPES.indexOf(b.inspType)) : [];
 
   function selectMachine(m) { setMachine(m); setType(null); }
   function mergeAll(list) {
@@ -124,10 +124,16 @@ function InspectionScreen() {
 
         {machine && machine !== '__pick__' && !type && (
           <React.Fragment>
-            <button onClick={() => setMachine(kit ? '__pick__' : null)} style={{
-              alignSelf: 'flex-start', background: 'none', border: 'none', color: 'var(--color-text-muted)',
-              fontSize: 'var(--text-sm)', fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font-sans)', padding: 0,
-            }}>← {kit ? '機種選択に戻る' : '機種選択に戻る'}</button>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <button onClick={() => setMachine(kit ? '__pick__' : null)} style={{
+                background: 'none', border: 'none', color: 'var(--color-text-muted)',
+                fontSize: 'var(--text-sm)', fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font-sans)', padding: 0,
+              }}>← 機種選択に戻る</button>
+              <button onClick={() => { window.location.href = '点検マスタ編集画面.html'; }} style={{
+                background: 'none', border: 'none', color: 'var(--color-text-muted)',
+                fontSize: 'var(--text-xs)', fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font-sans)', padding: 0,
+              }}>⚙️ マスタ編集</button>
+            </div>
             <div style={{ fontSize: 'var(--text-md)', fontWeight: 700 }}>{machine}</div>
             <div style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: 'var(--letter-spacing-label)' }}>
               点検種別を選択
