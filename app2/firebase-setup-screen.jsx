@@ -2,7 +2,12 @@ const { Header, Card, Button, Field } = window.MelittaZaikoDesignSystem_3f29a9;
 
 function FirebaseSetupScreen() {
   const saved = window.ZaikoDB.getConfig() || {};
-  const [v, setV] = React.useState({ key: saved.apiKey || '', auth: saved.authDomain || '', db: saved.databaseURL || '', pid: saved.projectId || '', anthropic: '', sbUrl: '', sbKey: '' });
+  const [v, setV] = React.useState({
+    key: saved.apiKey || '', auth: saved.authDomain || '', db: saved.databaseURL || '', pid: saved.projectId || '',
+    anthropic: localStorage.getItem('anthropic_key') || '',
+    sbUrl: localStorage.getItem('sb_url') || '',
+    sbKey: localStorage.getItem('sb_key') || '',
+  });
   const [error, setError] = React.useState('');
   const [testing, setTesting] = React.useState(false);
   const [status, setStatus] = React.useState(window.ZaikoDB.isReady() ? 'ok' : (saved.apiKey ? 'saved' : ''));
@@ -15,6 +20,9 @@ function FirebaseSetupScreen() {
     if (!v.key || !v.auth || !v.db || !v.pid) { setError('必須項目を入力してください'); return; }
     setError(''); setTesting(true);
     window.ZaikoDB.saveConfig({ apiKey: v.key, authDomain: v.auth, databaseURL: v.db, projectId: v.pid });
+    if (v.anthropic.trim()) localStorage.setItem('anthropic_key', v.anthropic.trim());
+    if (v.sbUrl.trim()) localStorage.setItem('sb_url', v.sbUrl.trim().replace(/\/$/, ''));
+    if (v.sbKey.trim()) localStorage.setItem('sb_key', v.sbKey.trim());
     try {
       await window.ZaikoDB.init();
       setStatus('ok');

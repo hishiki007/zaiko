@@ -29,25 +29,57 @@ function DeliverySlipScanScreen() {
     setError(''); setItems(null);
     const dataUrl = await fileToBase64(f);
     setImage(dataUrl);
-    if (!window.claude || !window.claude.complete) {
-      setError('AI解析が利用できません（window.claude未接続）');
+    const apiKey = localStorage.getItem('anthropic_key');
+    if (!apiKey && !(window.claude && window.claude.complete)) {
+      setError('AI解析にはAnthropic API Keyが必要です。設定・管理 → Firebase設定でAPI Keyを登録してください。');
       return;
     }
     setScanning(true);
     try {
       const mimeType = dataUrl.substring(5, dataUrl.indexOf(';'));
       const base64Data = dataUrl.substring(dataUrl.indexOf(',') + 1);
-      const res = await window.claude.complete({
-        system: 'あなたは日本語の納品書・仕入れ伝票の画像を解析するアシスタントです。画像に写っている品目名と数量を抽出し、必ずJSON配列のみを出力してください。説明文やマークダウンのコードフェンスは付けないでください。形式: [{"name":"部品名","qty":数量}]',
-        messages: [{
-          role: 'user',
-          content: [
-            { type: 'image', source: { type: 'base64', media_type: mimeType, data: base64Data } },
-            { type: 'text', text: '添付の納品書画像から、品目名と数量の一覧をJSON配列で抽出してください。' },
-          ],
-        }],
-        max_tokens: 1024,
-      });
+      let res;
+      if (apiKey) {
+        const resp = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: {
+            'x-api-key': apiKey,
+            'anthropic-version': '2023-06-01',
+            'content-type': 'application/json',
+            'anthropic-dangerous-direct-browser-access': 'true',
+          },
+          body: JSON.stringify({
+            model: 'claude-haiku-4-5',
+            max_tokens: 1024,
+            system: 'あなたは日本語の納品書・仕入れ伝票の画像を解析するアシスタントです。画像に写っている品目名と数量を抽出し、必ずJSON配列のみを出力してください。説明文やマークダウンのコードフェンスは付けないでください。形式: [{"name":"部品名","qty":数量}]',
+            messages: [{
+              role: 'user',
+              content: [
+                { type: 'image', source: { type: 'base64', media_type: mimeType, data: base64Data } },
+                { type: 'text', text: '添付の納品書画像から、品目名と数量の一覧をJSON配列で抽出してください。' },
+              ],
+            }],
+          }),
+        });
+        if (!resp.ok) {
+          const errBody = await resp.text();
+          throw new Error(`API エラー (${resp.status}): ${errBody.slice(0, 200)}`);
+        }
+        const json = await resp.json();
+        res = (json.content || []).map((c) => c.text || '').join('');
+      } else {
+        res = await window.claude.complete({
+          system: 'あなたは日本語の納品書・仕入れ伝票の画像を解析するアシスタントです。画像に写っている品目名と数量を抽出し、必ずJSON配列のみを出力してください。説明文やマークダウンのコードフェンスは付けないでください。形式: [{"name":"部品名","qty":数量}]',
+          messages: [{
+            role: 'user',
+            content: [
+              { type: 'image', source: { type: 'base64', media_type: mimeType, data: base64Data } },
+              { type: 'text', text: '添付の納品書画像から、品目名と数量の一覧をJSON配列で抽出してください。' },
+            ],
+          }],
+          max_tokens: 1024,
+        });
+      }
       const parsed = extractJSON(res);
       setItems(parsed.map((p) => ({ name: String(p.name || '').trim(), qty: Number(p.qty) || 1 })).filter((p) => p.name));
       if (!parsed.length) setError('品目が検出されませんでした');
