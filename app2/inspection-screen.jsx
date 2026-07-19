@@ -6,6 +6,7 @@ function InspectionScreen() {
   const [machine, setMachine] = React.useState(null);
   const [type, setType] = React.useState(null);
   const [kit, setKit] = React.useState(null);
+  const [prepared, setPrepared] = React.useState([]); // [{machine, inspType}]
   const [loc, setLoc] = React.useState(window.ZaikoDB.getOperator());
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState('');
@@ -23,8 +24,37 @@ function InspectionScreen() {
 
   const typesForMachine = machine ? allTemplates.filter((t) => t.machine === machine) : [];
 
-  function selectMachine(m) { setMachine(m); setType(null); setKit(null); }
-  function selectType(t) { setType(t.inspType); setKit(t.parts.map((i) => ({ ...i, choice: i.altNo ? i.no : undefined, name: (parts && parts.find((p) => p.no === i.no) || {}).name }))); }
+  function selectMachine(m) { setMachine(m); setType(null); }
+  function mergeAll(list) {
+    let merged = null;
+    for (const p of list) {
+      if (!merged) { merged = p.parts.map((it) => ({ ...it })); continue; }
+      for (const inc of p.parts) {
+        const existing = merged.find((it) => (it.no && it.no === inc.no) || (!it.no && it.name === inc.name));
+        if (existing) existing.qty += inc.qty;
+        else merged.push({ ...inc });
+      }
+    }
+    return merged;
+  }
+  function selectType(t) {
+    setType(t.inspType);
+    const incoming = t.parts.map((i) => ({ ...i, choice: i.altNo ? i.no : undefined, name: (parts && parts.find((p) => p.no === i.no) || {}).name }));
+    setPrepared((prev) => {
+      const next = [...prev, { machine, inspType: t.inspType, parts: incoming }];
+      setKit(mergeAll(next));
+      return next;
+    });
+    setMachine(null); setType(null);
+  }
+  function removePrepared(idx) {
+    setPrepared((prev) => {
+      const next = prev.filter((_, i) => i !== idx);
+      setKit(next.length ? mergeAll(next) : null);
+      return next;
+    });
+  }
+  function clearAll() { setPrepared([]); setKit(null); setMachine(null); setType(null); setError(''); }
   function updateQty(idx, qty) { setKit((prev) => prev.map((it, i) => (i === idx ? { ...it, qty } : it))); }
   function setChoice(idx, code) { setKit((prev) => prev.map((it, i) => (i === idx ? { ...it, choice: code } : it))); }
 
@@ -37,18 +67,24 @@ function InspectionScreen() {
 
       <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: 16, display: 'flex', flexDirection: 'column', gap: 16 }}>
         {kit && (
-          <button onClick={() => { window.location.href = '点検マスタ編集画面.html'; }} style={{
-            alignSelf: 'flex-end', background: 'none', border: 'none', color: 'var(--color-text-muted)',
-            fontSize: 'var(--text-xs)', fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font-sans)', padding: 0,
-          }}>⚙️ マスタ編集</button>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <button onClick={clearAll} style={{
+              background: 'none', border: 'none', color: 'var(--color-danger)',
+              fontSize: 'var(--text-xs)', fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font-sans)', padding: 0,
+            }}>🗑 リストをクリア</button>
+            <button onClick={() => { window.location.href = '点検マスタ編集画面.html'; }} style={{
+              background: 'none', border: 'none', color: 'var(--color-text-muted)',
+              fontSize: 'var(--text-xs)', fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font-sans)', padding: 0,
+            }}>⚙️ マスタ編集</button>
+          </div>
         )}
-        {!machine && (
+        {!machine && !kit && (
           <button onClick={() => { window.location.href = '点検履歴画面.html'; }} style={{
             alignSelf: 'flex-end', background: 'none', border: 'none', color: 'var(--color-text-muted)',
             fontSize: 'var(--text-xs)', fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font-sans)', padding: 0,
           }}>📋 点検履歴を見る</button>
         )}
-        {!machine && (
+        {!machine && !kit && (
           <React.Fragment>
             <div style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: 'var(--letter-spacing-label)' }}>
               機種を選択
@@ -65,12 +101,33 @@ function InspectionScreen() {
           </React.Fragment>
         )}
 
-        {machine && !type && (
+        {machine === '__pick__' && (
           <React.Fragment>
             <button onClick={() => setMachine(null)} style={{
               alignSelf: 'flex-start', background: 'none', border: 'none', color: 'var(--color-text-muted)',
               fontSize: 'var(--text-sm)', fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font-sans)', padding: 0,
-            }}>← 機種選択に戻る</button>
+            }}>← リストに戻る</button>
+            <div style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: 'var(--letter-spacing-label)' }}>
+              機種を選択
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              {MACHINES.map((m) => (
+                <button key={m} onClick={() => selectMachine(m)} style={{
+                  height: 64, borderRadius: 'var(--radius-lg)', border: 'none',
+                  background: 'var(--color-accent-purple)', color: '#fff', fontSize: 'var(--text-md)', fontWeight: 700,
+                  cursor: 'pointer', fontFamily: 'var(--font-sans)',
+                }}>{m}</button>
+              ))}
+            </div>
+          </React.Fragment>
+        )}
+
+        {machine && machine !== '__pick__' && !type && (
+          <React.Fragment>
+            <button onClick={() => setMachine(kit ? '__pick__' : null)} style={{
+              alignSelf: 'flex-start', background: 'none', border: 'none', color: 'var(--color-text-muted)',
+              fontSize: 'var(--text-sm)', fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font-sans)', padding: 0,
+            }}>← {kit ? '機種選択に戻る' : '機種選択に戻る'}</button>
             <div style={{ fontSize: 'var(--text-md)', fontWeight: 700 }}>{machine}</div>
             <div style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: 'var(--letter-spacing-label)' }}>
               点検種別を選択
@@ -87,17 +144,23 @@ function InspectionScreen() {
           </React.Fragment>
         )}
 
-        {kit && (
+        {kit && !machine && (
           <React.Fragment>
-            <button onClick={() => { setType(null); setKit(null); }} style={{
-              alignSelf: 'flex-start', background: 'none', border: 'none', color: 'var(--color-text-muted)',
-              fontSize: 'var(--text-sm)', fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font-sans)', padding: 0,
-            }}>← 種別選択に戻る</button>
+            <button onClick={() => setMachine('__pick__')} style={{
+              alignSelf: 'flex-start', background: 'none', border: 'none', color: 'var(--color-primary)',
+              fontSize: 'var(--text-sm)', fontWeight: 700, cursor: 'pointer', fontFamily: 'var(--font-sans)', padding: 0,
+            }}>＋ 他の機種・点検も追加する</button>
             <Card padding={12}>
-              <div style={{ fontSize: 'var(--text-sm)', marginBottom: 8 }}>
-                <strong>機種：</strong>{machine}　<strong>点検：</strong>{type}
+              <div style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--color-text-muted)', marginBottom: 8 }}>準備中の点検</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
+                {prepared.map((p, i) => (
+                  <span key={i} style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 6, background: '#f5f3ff', color: 'var(--color-accent-purple)',
+                    borderRadius: 'var(--radius-pill)', padding: '4px 10px', fontSize: 'var(--text-xs)', fontWeight: 700,
+                  }}>{p.machine} {p.inspType}<button onClick={() => removePrepared(i)} style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', fontWeight: 700, padding: 0 }}>✕</button></span>
+                ))}
               </div>
-              <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--color-text-muted)', marginBottom: 4 }}>出庫元</label>
+              <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--color-text-muted)', marginBottom: 4 }}>点検出庫先</label>
               <select value={loc} onChange={(e) => setLoc(e.target.value)} style={{
                 width: '100%', height: 40, borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)',
                 fontSize: 'var(--text-sm)', fontFamily: 'var(--font-sans)', color: 'var(--color-text)', background: '#fff', padding: '0 8px',
@@ -106,7 +169,7 @@ function InspectionScreen() {
               </select>
             </Card>
             <div style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: 'var(--letter-spacing-label)' }}>
-              出庫内容
+              出庫内容（合算）
             </div>
             <Card padding={0}>
               {kit.map((it, i) => (
@@ -154,7 +217,7 @@ function InspectionScreen() {
       }}>
         <Button
           variant="outline"
-          disabled={!kit || saving}
+          disabled={!kit || !!machine || saving}
           style={{ flex: 1, height: 56, fontSize: 'var(--text-md)' }}
           onClick={async () => {
             if (!kit) return;
@@ -183,7 +246,7 @@ function InspectionScreen() {
           ↔ 部品移動を実行（→{window.ZaikoDB.getOperator()}）
         </Button>
         <Button
-          disabled={!kit || saving}
+          disabled={!kit || !!machine || saving}
           style={{
             flex: 2, height: 56, fontSize: 'var(--text-md)', fontWeight: 700, border: 'none',
             cursor: kit ? 'pointer' : 'default', borderRadius: 'var(--radius-lg)', color: '#fff',
