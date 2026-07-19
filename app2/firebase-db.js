@@ -117,6 +117,7 @@ async function seedInspTemplatesIfEmpty(defaults){
   const snap=await d.ref('inspTemplates').once('value');
   if(!snap.val()){await saveInspTemplates(defaults);}
 }
+async function dedupeParts(){
   const d=await init();if(!d)throw new Error('not connected');
   const snap=await d.ref('parts').once('value');
   const val=snap.val()||{};

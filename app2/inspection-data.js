@@ -15,6 +15,7 @@ const XT_FULL_RULES=[
   { no:'22346', types:['2年半点検','5年点検','8年点検'] },
 ];
 const XT_BLACK_RULES=[
+  { no:'27313', types: TYPES },
   { no:'48841', types: YEARLY },
   { no:'580300', altNo:'580301', types: YEARLY },
   { no:'44552', types:['1年半点検','3年点検','4年半点検','6年点検','7年半点検'] },
