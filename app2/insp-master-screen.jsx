@@ -6,13 +6,19 @@ function InspMasterScreen() {
   const [templates, setTemplates] = React.useState(window.InspData.loadTemplates);
   const MACHINE_GROUPS = [...new Set(templates.map((t) => t.machine))];
   const [showForm, setShowForm] = React.useState(false);
+  const [editingId, setEditingId] = React.useState(null);
   const [machine, setMachine] = React.useState('');
   const [inspType, setInspType] = React.useState('');
   const [rows, setRows] = React.useState([emptyRow()]);
   const [error, setError] = React.useState('');
 
   function openAdd() {
-    setMachine(''); setInspType(''); setRows([emptyRow()]); setError(''); setShowForm(true);
+    setEditingId(null); setMachine(''); setInspType(''); setRows([emptyRow()]); setError(''); setShowForm(true);
+  }
+  function openEdit(t) {
+    setEditingId(t.id); setMachine(t.machine); setInspType(t.inspType);
+    setRows(t.parts.map((p) => ({ no: p.no || '', name: p.name || '', qty: p.qty })));
+    setError(''); setShowForm(true);
   }
 
   function updateRow(i, patch) {
@@ -26,7 +32,12 @@ function InspMasterScreen() {
     const partsArr = rows.filter((r) => r.no.trim() || r.name.trim()).map((r) => ({ no: r.no.trim(), name: r.name.trim(), qty: Number(r.qty) || 1 }));
     if (partsArr.length === 0) { setError('部品を1つ以上追加してください'); return; }
     setTemplates((prev) => {
-      const next = [...prev, { id: Date.now(), machine: machine.trim(), inspType: inspType.trim(), parts: partsArr }];
+      let next;
+      if (editingId) {
+        next = prev.map((t) => (t.id === editingId ? { ...t, machine: machine.trim(), inspType: inspType.trim(), parts: partsArr } : t));
+      } else {
+        next = [...prev, { id: Date.now(), machine: machine.trim(), inspType: inspType.trim(), parts: partsArr }];
+      }
       window.InspData.persistTemplates(next);
       return next;
     });
@@ -74,7 +85,7 @@ function InspMasterScreen() {
 
         {showForm && (
           <Card style={{ background: 'var(--color-bg)' }}>
-            <div style={{ fontWeight: 700, marginBottom: 10 }}>新規テンプレート</div>
+            <div style={{ fontWeight: 700, marginBottom: 10 }}>{editingId ? 'テンプレートを編集' : '新規テンプレート'}</div>
             <Field label="機種名" value={machine} onChange={(e) => setMachine(e.target.value)} placeholder="例: ブラック機" />
             <Field label="点検種別" value={inspType} onChange={(e) => setInspType(e.target.value)} placeholder="例: 2年半点検" />
             <div style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--color-text-muted)', marginBottom: 6 }}>使用部品リスト（部品番号を推奨、名称のみでも可）</div>
@@ -113,6 +124,7 @@ function InspMasterScreen() {
                   <div style={{ display: 'flex', gap: 4 }}>
                     <button onClick={() => move(t.id, -1)} disabled={i === 0} style={{ width: 32, height: 32, borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', background: '#fff', color: 'var(--color-text)', cursor: i === 0 ? 'default' : 'pointer', opacity: i === 0 ? 0.3 : 1, fontSize: 14 }}>▲</button>
                     <button onClick={() => move(t.id, 1)} disabled={i === arr.length - 1} style={{ width: 32, height: 32, borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', background: '#fff', color: 'var(--color-text)', cursor: i === arr.length - 1 ? 'default' : 'pointer', opacity: i === arr.length - 1 ? 0.3 : 1, fontSize: 14 }}>▼</button>
+                    <Button variant="outline" size="sm" onClick={() => openEdit(t)}>編集</Button>
                     <Button variant="outline" size="sm" style={{ color: 'var(--color-danger)', borderColor: 'var(--color-danger)' }} onClick={() => del(t.id)}>削除</Button>
                   </div>
                 </div>
