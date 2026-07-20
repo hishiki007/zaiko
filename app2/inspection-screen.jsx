@@ -12,6 +12,7 @@ function InspectionScreen() {
   const [type, setType] = React.useState(null);
   const [kit, setKit] = React.useState(null);
   const [prepared, setPrepared] = React.useState([]); // [{machine, inspType}]
+  const [pending, setPending] = React.useState(null); // {t, qty}
   const [loc, setLoc] = React.useState(window.ZaikoDB.getOperator());
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState('');
@@ -67,14 +68,16 @@ function InspectionScreen() {
     }
     return merged;
   }
-  function selectType(t) {
-    setType(t.inspType);
-    const incoming = t.parts.map((i) => ({ ...i, choice: i.altNo ? i.no : undefined, name: (parts && parts.find((p) => p.no === i.no) || {}).name }));
+  function selectType(t) { setPending({ t, qty: 1 }); }
+  function confirmPending() {
+    const t = pending.t; const mult = pending.qty;
+    const incoming = t.parts.map((i) => ({ ...i, qty: i.qty * mult, choice: i.altNo ? i.no : undefined, name: (parts && parts.find((p) => p.no === i.no) || {}).name }));
     setPrepared((prev) => {
-      const next = [...prev, { machine, inspType: t.inspType, parts: incoming }];
+      const next = [...prev, { machine, inspType: t.inspType, qty: mult, parts: incoming }];
       setKit(mergeAll(next));
       return next;
     });
+    setPending(null);
     setMachine(null); setType(null);
   }
   function removePrepared(idx) {
@@ -165,6 +168,27 @@ function InspectionScreen() {
               }}>⚙️ マスタ編集</button>
             </div>
             <div style={{ fontSize: 'var(--text-md)', fontWeight: 700 }}>{machine}</div>
+            {pending ? (
+              <Card padding={12}>
+                <div style={{ fontSize: 'var(--text-sm)', fontWeight: 700, marginBottom: 10 }}>{pending.t.inspType}　台数を選択</div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 20, marginBottom: 12 }}>
+                  <button onClick={() => setPending((p) => ({ ...p, qty: Math.max(1, p.qty - 1) }))} style={{
+                    width: 48, height: 48, borderRadius: '50%', border: '1px solid var(--color-border)',
+                    background: 'var(--color-surface)', fontSize: 22, fontWeight: 700, color: 'var(--color-primary)', cursor: 'pointer',
+                  }}>−</button>
+                  <span style={{ fontSize: 32, fontWeight: 700, minWidth: 72, textAlign: 'center', whiteSpace: 'nowrap' }}>{pending.qty}台</span>
+                  <button onClick={() => setPending((p) => ({ ...p, qty: p.qty + 1 }))} style={{
+                    width: 48, height: 48, borderRadius: '50%', border: '1px solid var(--color-border)',
+                    background: 'var(--color-surface)', fontSize: 22, fontWeight: 700, color: 'var(--color-primary)', cursor: 'pointer',
+                  }}>＋</button>
+                </div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <Button variant="outline" style={{ flex: 1 }} onClick={() => setPending(null)}>キャンセル</Button>
+                  <Button variant="primary" style={{ flex: 2 }} onClick={confirmPending}>この内容で追加する</Button>
+                </div>
+              </Card>
+            ) : (
+            <React.Fragment>
             <div style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: 'var(--letter-spacing-label)' }}>
               点検種別を選択
             </div>
@@ -177,6 +201,8 @@ function InspectionScreen() {
                 }}>{t.inspType}</button>
               ))}
             </div>
+            </React.Fragment>
+            )}
           </React.Fragment>
         )}
 
@@ -193,7 +219,7 @@ function InspectionScreen() {
                   <span key={i} style={{
                     display: 'inline-flex', alignItems: 'center', gap: 6, background: '#f5f3ff', color: 'var(--color-accent-purple)',
                     borderRadius: 'var(--radius-pill)', padding: '4px 10px', fontSize: 'var(--text-xs)', fontWeight: 700,
-                  }}>{p.machine} {p.inspType}<button onClick={() => removePrepared(i)} style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', fontWeight: 700, padding: 0 }}>✕</button></span>
+                  }}>{p.machine} {p.inspType}{p.qty > 1 ? `×${p.qty}台` : ''}<button onClick={() => removePrepared(i)} style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', fontWeight: 700, padding: 0 }}>✕</button></span>
                 ))}
               </div>
               <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--color-text-muted)', marginBottom: 4 }}>点検出庫先</label>

@@ -17,6 +17,8 @@ function QRScanScreen() {
   const canvasRef = React.useRef(null);
   const streamRef = React.useRef(null);
   const rafRef = React.useRef(null);
+  const lastCodeRef = React.useRef('');
+  const lastCodeTimeRef = React.useRef(0);
   const [camState, setCamState] = React.useState('idle'); // idle | starting | live | error
   const [camError, setCamError] = React.useState('');
   const [manualCode, setManualCode] = React.useState('');
@@ -70,9 +72,11 @@ function QRScanScreen() {
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
     const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
     const code = window.jsQR(img.data, img.width, img.height);
-    if (code && code.data) {
+    const now = Date.now();
+    if (code && code.data && (code.data !== lastCodeRef.current || now - lastCodeTimeRef.current > 2000)) {
+      lastCodeRef.current = code.data;
+      lastCodeTimeRef.current = now;
       handleDecoded(code.data);
-      return;
     }
     rafRef.current = requestAnimationFrame(tick);
   }

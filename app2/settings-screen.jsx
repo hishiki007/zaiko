@@ -129,8 +129,6 @@ function SettingsScreen() {
         <SectionLabel>履歴</SectionLabel>
         <Card padding={0}>
           <MenuRow icon="📋" label="全履歴を見る" onClick={() => setHistoryOpen(true)} />
-          <MenuRow icon="🔍" label="使用ログ検索" onClick={() => { window.location.href = '使用ログ検索画面.html'; }} />
-          <MenuRow icon="👤" label="作業者別アクティビティ" onClick={() => { window.location.href = '作業者別アクティビティ画面.html'; }} />
           <MenuRow icon="🗑" label={clearing ? '削除中…' : '履歴を全件削除'} onClick={runClearHistory} />
         </Card>
 

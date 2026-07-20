@@ -35,6 +35,8 @@ function HomeScreen() {
   const [query, setQuery] = React.useState('');
   const [recent, setRecent] = React.useState([]);
   const [connected, setConnected] = React.useState(false);
+  const [fullHistory, setFullHistory] = React.useState([]);
+  const [fullHistoryOpen, setFullHistoryOpen] = React.useState(false);
 
   React.useEffect(() => {
     let unsub = () => {};
@@ -45,13 +47,22 @@ function HomeScreen() {
     return () => unsub();
   }, []);
 
+  React.useEffect(() => {
+    if (!fullHistoryOpen) return;
+    let unsub = () => {};
+    window.ZaikoDB.subscribeHistory((all) => {
+      setFullHistory(all.map((h) => ({ ...h, time: new Date(h.time).toLocaleString('ja-JP') })));
+    }, 300).then((u) => { unsub = u; });
+    return () => unsub();
+  }, [fullHistoryOpen]);
+
   return (
     <div style={{
       fontFamily: 'var(--font-sans)', background: 'var(--color-bg)', color: 'var(--color-text)',
       height: '100%', display: 'flex', flexDirection: 'column', minWidth: 0, paddingTop: 47,
     }}>
       <Header connected={connected} title="部品在庫管理" right={<div style={{ display: 'flex', gap: 6 }}>
-        <Button variant="ghost" size="sm" onClick={() => { window.location.href = '使用ログ検索画面.html'; }}>📋 全履歴</Button>
+        <Button variant="ghost" size="sm" onClick={() => setFullHistoryOpen(true)}>📋 全履歴</Button>
         <Button variant="ghost" size="sm" onClick={() => { window.location.href = '設定・管理画面.html'; }}>⚙️</Button>
       </div>} />
 
@@ -130,6 +141,21 @@ function HomeScreen() {
             >
               {name}
             </Button>
+          ))}
+        </div>
+      </Modal>
+
+      <Modal
+        open={fullHistoryOpen}
+        onClose={() => setFullHistoryOpen(false)}
+        title="全履歴"
+        footer={<Button variant="outline" onClick={() => setFullHistoryOpen(false)}>閉じる</Button>}
+      >
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          {fullHistory.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '20px 0', color: 'var(--color-text-muted)', fontSize: 'var(--text-sm)' }}>履歴がありません</div>
+          ) : fullHistory.map((h, i) => (
+            <HistoryItem key={i} type={h.type} time={h.time} operator={h.operator} detail={h.detail} name={window.historyName(h)} />
           ))}
         </div>
       </Modal>

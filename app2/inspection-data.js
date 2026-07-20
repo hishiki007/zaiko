@@ -41,6 +41,35 @@ const LNG_BLACK_PLACEHOLDER=[
 
 const DEFAULT_TEMPLATES=[...expand('XTフル',XT_FULL_RULES),...expand('XTブラック',XT_BLACK_RULES),...LNG_FULL_PLACEHOLDER,...LNG_BLACK_PLACEHOLDER];
 
+function normalizeTemplates(list){
+  let changed=false;
+  const RENAME={'半年':'半年点検','1年':'1年点検','1年半':'1年半点検','2年':'2年点検','2年半':'2年半点検','3年':'3年点検','3年半':'3年半点検','4年':'4年点検','4年半':'4年半点検','5年':'5年点検','5年半':'5年半点検','6年':'6年点検','6年半':'6年半点検','7年':'7年点検','7年半':'7年半点検','8年':'8年点検','8年半':'8年半点検'};
+  let next=list.map((t)=>{
+    if(RENAME[t.inspType]){changed=true;return {...t, inspType:RENAME[t.inspType]};}
+    return t;
+  });
+  next=next.map((t)=>{
+    const cleanParts=t.parts.filter((p)=>p.no || p.name);
+    if(cleanParts.length!==t.parts.length){changed=true;return {...t, parts:cleanParts};}
+    return t;
+  });
+  const merged=[];
+  const seen=new Map();
+  for(const t of next){
+    const k=t.machine+'|'+t.inspType;
+    if(seen.has(k)){
+      changed=true;
+      const existing=merged[seen.get(k)];
+      const partKeys=new Set(existing.parts.map((p)=>p.no||p.name));
+      const extra=t.parts.filter((p)=>!partKeys.has(p.no||p.name));
+      existing.parts=[...existing.parts, ...extra];
+    } else {
+      seen.set(k, merged.length);
+      merged.push({...t});
+    }
+  }
+  return changed ? merged : null;
+}
 function patchXtBlack27313(list){
   let changed=false;
   const next=list.map((t)=>{
@@ -72,11 +101,13 @@ function resetTemplates(){
 }
 function subscribeTemplates(cb){
   function handle(list){
-    const patchedParts=patchXtBlack27313(list);
-    const afterParts=patchedParts || list;
+    const patchedNorm=normalizeTemplates(list);
+    const afterNorm=patchedNorm || list;
+    const patchedParts=patchXtBlack27313(afterNorm);
+    const afterParts=patchedParts || afterNorm;
     const patchedOrder=patchXtOrder(afterParts);
     const final=patchedOrder || afterParts;
-    if(patchedParts || patchedOrder){ persistTemplates(final); }
+    if(patchedNorm || patchedParts || patchedOrder){ persistTemplates(final); }
     cb(final);
   }
   if(!(window.ZaikoDB && window.ZaikoDB.subscribeInspTemplates)){ handle(loadTemplates()); return Promise.resolve(()=>{}); }
