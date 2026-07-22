@@ -536,7 +536,7 @@ function initLocUI(){
   var locOpts=LOCS.map(function(l){return '<option>'+l+'</option>';}).join('');
   var trFrom=document.getElementById('tr-from'); if(trFrom){ trFrom.innerHTML='<option value="">選択...</option>'+locOpts; }
   var trTo=document.getElementById('tr-to'); if(trTo){ trTo.innerHTML='<option value="">選択...</option>'+locOpts; }
-  var skLoc=document.getElementById('sk-loc'); if(skLoc){ skLoc.innerHTML=locOpts; } var sdl=document.getElementById('scan-dest-label'); if(sdl) sdl.textContent=LOCS[0];
+  var skLoc=document.getElementById('sk-loc'); if(skLoc){ skLoc.innerHTML=locOpts; } var sdl=document.getElementById('scan-dest-label'); if(sdl) sdl.textContent=LOCS[0]; var sdl=document.getElementById('scan-dest-label'); if(sdl) sdl.textContent=LOCS[0];
 }
 initLocUI();
 const TYPE_LABELS = { move:'移動', add:'追加', edit:'編集', del:'削除', in:'入庫', out:'出庫', set:'直接指定' };
