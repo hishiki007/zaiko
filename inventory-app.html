@@ -467,7 +467,7 @@ tr:hover td { background: #f8fafc; }
 
 <script>
 // ===== バージョン自動更新チェック =====
-const APP_VERSION = 45;
+const APP_VERSION = 46;
 function checkForUpdate(){
   fetch(location.pathname+'?_cb='+Date.now())
     .then(function(r){return r.text();})
@@ -485,7 +485,6 @@ function showUpdateBanner(){
   div.innerHTML='🆕 アプリの更新があります'
     +'<button onclick="var u=new URL(location.href);u.searchParams.set(\'_v\',Date.now());location.href=u.toString();" style="background:#fff;color:#7c3aed;border:none;padding:8px 18px;border-radius:8px;font-weight:700;font-size:14px;cursor:pointer;">今すぐ更新</button>';
   document.body.appendChild(div);
-}
 }
 setTimeout(checkForUpdate, 5000);            // 起動5秒後にチェック
 setInterval(checkForUpdate, 30*60*1000);     // 以降30分ごとにチェック
