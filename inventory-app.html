@@ -1514,7 +1514,7 @@ function doInspectionTransfer(){
     upd['parts/'+key+'/locs/シンワ倉庫']=fCur-item.qty;
     upd['parts/'+key+'/locs/'+loc]=tCur+item.qty;
     upd['parts/'+key+'/updatedAt']=Date.now();
-    addHist('move',key,part.name,'点検移動('+inspState.batch.map(function(b){return b.machine+'×'+b.units+'台';}).join(',')+'/'+inspState.type+') シンワ倉庫→'+loc+': '+fCur+'→'+(fCur-item.qty)+' / '+tCur+'→'+(tCur+item.qty));
+    addHist('move',key,part.name,'点検移動('+inspState.batch.map(function(b){return b.machine+' '+b.type+'×'+b.units+'台';}).join(',')+') シンワ倉庫→'+loc+': '+fCur+'→'+(fCur-item.qty)+' / '+tCur+'→'+(tCur+item.qty));
     count++;
   });
   if(count===0&&missing.length>0){toast('❌ 部品が見つかりません: '+missing.join(', '));return;}
@@ -1538,7 +1538,7 @@ function doInspectionOut(){
     const nv=cur-item.qty;
     upd['parts/'+key+'/locs/'+loc]=nv;
     upd['parts/'+key+'/updatedAt']=Date.now();
-    addHist('out',key,part.name,'点検出庫('+inspState.batch.map(function(b){return b.machine+'×'+b.units+'台';}).join(',')+'/'+inspState.type+') '+loc+': '+cur+'→'+nv);
+    addHist('out',key,part.name,'点検出庫('+inspState.batch.map(function(b){return b.machine+' '+b.type+'×'+b.units+'台';}).join(',')+'） '+loc+': '+cur+'→'+nv);
     count++;
   });
   if(count===0&&missing.length>0){toast('❌ 部品が見つかりません: '+missing.join(', '));return;}
@@ -1553,10 +1553,32 @@ function openInspMaster(){
   open_('ov-insp-master');
 }
 
+function fixInspPartNo(oldNo,newNo){
+  const upd={};
+  let count=0;
+  Object.entries(inspTemplates).forEach(function([key,tmpl]){
+    const partsRaw=tmpl.parts||{};
+    const idxs=Array.isArray(partsRaw)?partsRaw.map(function(_,i){return i;}):Object.keys(partsRaw);
+    idxs.forEach(function(i){
+      const p=partsRaw[i];
+      if(p&&String(p.no||'').trim()===String(oldNo)){
+        upd['inspectionTemplates/'+key+'/parts/'+i+'/no']=String(newNo);
+        count++;
+      }
+    });
+  });
+  if(count===0){ toast(oldNo+'の部品番号は見つかりませんでした'); return; }
+  db.ref().update(upd).then(function(){
+    toast('✅ '+oldNo+'→'+newNo+' を'+count+'箇所修正しました');
+    renderInspMaster();
+  }).catch(function(e){ toast('❌ エラー: '+(e.message||e)); });
+}
+
 function renderInspMaster(){
   const tmpls=Object.entries(inspTemplates);
-  let html=`<div style="margin-bottom:12px;">
+  let html=`<div style="margin-bottom:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
     <button class="btn btn-primary" onmousedown="event.preventDefault();" onclick="showAddInspForm()">＋ テンプレートを追加</button>
+    <button class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger);" onmousedown="event.preventDefault();" onclick="if(confirm('全テンプレートの44543を44553に一括変更しますか？'))fixInspPartNo('44543','44553')">🔧 44543→44553 一括修正</button>
   </div>
   <div id="insp-add-form" style="display:none;"></div>`;
   if(tmpls.length===0){
