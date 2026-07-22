@@ -355,7 +355,7 @@ tr:hover td { background: #f8fafc; }
     <div id="scan-results" style="margin-top:14px;"></div>
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeOv('ov-scan')">キャンセル</button>
-      <button class="btn btn-success" id="scan-confirm-btn" onclick="doScanImport()" style="display:none;">✅ シンワ倉庫へ入庫</button>
+      <button class="btn btn-success" id="scan-confirm-btn" onclick="doScanImport()" style="display:none;">✅ <span id="scan-import-label">シンワ倉庫</span>へ入庫</button>
     </div>
   </div>
 </div>
@@ -461,7 +461,7 @@ tr:hover td { background: #f8fafc; }
 
 <script>
 // ===== バージョン自動更新チェック =====
-const APP_VERSION = 55;
+const APP_VERSION = 56;
 function checkForUpdate(){
   fetch(location.pathname+'?_cb='+Date.now())
     .then(function(r){return r.text();})
@@ -536,7 +536,7 @@ function initLocUI(){
   var locOpts=LOCS.map(function(l){return '<option>'+l+'</option>';}).join('');
   var trFrom=document.getElementById('tr-from'); if(trFrom){ trFrom.innerHTML='<option value="">選択...</option>'+locOpts; }
   var trTo=document.getElementById('tr-to'); if(trTo){ trTo.innerHTML='<option value="">選択...</option>'+locOpts; }
-  var skLoc=document.getElementById('sk-loc'); if(skLoc){ skLoc.innerHTML=locOpts; } var sdl=document.getElementById('scan-dest-label'); if(sdl) sdl.textContent=LOCS[0]; var sdl=document.getElementById('scan-dest-label'); if(sdl) sdl.textContent=LOCS[0];
+  var skLoc=document.getElementById('sk-loc'); if(skLoc){ skLoc.innerHTML=locOpts; } var sdl=document.getElementById('scan-dest-label'); if(sdl) sdl.textContent=LOCS[0]; var sil=document.getElementById('scan-import-label'); if(sil) sil.textContent=LOCS[0]; var sdl=document.getElementById('scan-dest-label'); if(sdl) sdl.textContent=LOCS[0]; var sil=document.getElementById('scan-import-label'); if(sil) sil.textContent=LOCS[0];
 }
 initLocUI();
 const TYPE_LABELS = { move:'移動', add:'追加', edit:'編集', del:'削除', in:'入庫', out:'出庫', set:'直接指定' };
