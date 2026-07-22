@@ -199,13 +199,8 @@ tr:hover td { background: #f8fafc; }
     <button class="btn" style="background:#7c3aed;color:#fff;" onclick="openInspection()">🔧 点検</button>
   </div>
 
-  <div class="loc-tabs">
-    <div class="loc-tab active" data-loc="all" onclick="setLocTab(this,'all')">すべて<span class="cnt" id="cnt-all">0</span></div>
-    <div class="loc-tab" data-loc="シンワ倉庫" onclick="setLocTab(this,'シンワ倉庫')">シンワ倉庫<span class="cnt" id="cnt-0">0</span></div>
-    <div class="loc-tab" data-loc="アラン" onclick="setLocTab(this,'アラン')">アラン<span class="cnt" id="cnt-1">0</span></div>
-    <div class="loc-tab" data-loc="ゆーや" onclick="setLocTab(this,'ゆーや')">ゆーや<span class="cnt" id="cnt-2">0</span></div>
-    <div class="loc-tab" data-loc="しゅん" onclick="setLocTab(this,'しゅん')">しゅん<span class="cnt" id="cnt-3">0</span></div>
-    <div class="loc-tab" data-loc="たくや" onclick="setLocTab(this,'たくや')">たくや<span class="cnt" id="cnt-4">0</span></div>
+  <div class="loc-tabs" id="loc-tabs">
+    <!-- populated by initLocUI() -->
   </div>
   </div>
 
@@ -282,13 +277,13 @@ tr:hover td { background: #f8fafc; }
       <div class="field"><label>移動元</label>
         <select id="tr-from" onchange="updateTrPreview()">
           <option value="">選択...</option>
-          <option>シンワ倉庫</option><option>アラン</option><option>ゆーや</option><option>しゅん</option><option>たくや</option>
+          
         </select>
       </div>
       <div class="field"><label>移動先</label>
         <select id="tr-to" onchange="updateTrPreview()">
           <option value="">選択...</option>
-          <option>シンワ倉庫</option><option>アラン</option><option>ゆーや</option><option>しゅん</option><option>たくや</option>
+          
         </select>
       </div>
     </div>
@@ -309,7 +304,6 @@ tr:hover td { background: #f8fafc; }
     <input type="hidden" id="sk-key" />
     <div class="field"><label>保管場所</label>
       <select id="sk-loc" onchange="updateSkPreview()">
-        <option>シンワ倉庫</option><option>アラン</option><option>ゆーや</option><option>しゅん</option><option>たくや</option>
       </select>
     </div>
     <div style="display:flex;gap:8px;margin-bottom:14px;">
@@ -467,7 +461,7 @@ tr:hover td { background: #f8fafc; }
 
 <script>
 // ===== バージョン自動更新チェック =====
-const APP_VERSION = 46;
+const APP_VERSION = 47;
 function checkForUpdate(){
   fetch(location.pathname+'?_cb='+Date.now())
     .then(function(r){return r.text();})
@@ -509,6 +503,15 @@ const SITE_CONFIGS = {
 };
 const _activeSite = SITE_CONFIGS[_siteParam] || null;
 const LOCS = _activeSite ? _activeSite.locs : ['シンワ倉庫','アラン','ゆーや','しゅん','たくや'];
+function initLocUI(){
+  const lt=document.getElementById('loc-tabs');
+  if(lt){ lt.innerHTML='<div class="loc-tab active" data-loc="all" onclick="setLocTab(this,\'all\')">すべて<span class="cnt" id="cnt-all">0</span></div>'+LOCS.map(function(loc,i){return '<div class="loc-tab" data-loc="'+loc+'" onclick="setLocTab(this,\''+loc+'\')">' +loc+'<span class="cnt" id="cnt-'+i+'">0</span></div>';}).join(''); }
+  var locOpts=LOCS.map(function(l){return '<option>'+l+'</option>';}).join('');
+  var trFrom=document.getElementById('tr-from'); if(trFrom){ trFrom.innerHTML='<option value="">選択...</option>'+locOpts; }
+  var trTo=document.getElementById('tr-to'); if(trTo){ trTo.innerHTML='<option value="">選択...</option>'+locOpts; }
+  var skLoc=document.getElementById('sk-loc'); if(skLoc){ skLoc.innerHTML=locOpts; }
+}
+initLocUI();
 const TYPE_LABELS = { move:'移動', add:'追加', edit:'編集', del:'削除', in:'入庫', out:'出庫', set:'直接指定' };
 let db=null, parts={}, hist=[];
 let curLoc='all', skMode='in', lastOpKey=null;
