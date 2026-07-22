@@ -339,7 +339,7 @@ tr:hover td { background: #f8fafc; }
 
 <div class="overlay" id="ov-scan" onclick="closeOv('ov-scan',event)">
   <div class="modal" style="max-width:500px;">
-    <h3>📷 納品書スキャン → シンワ倉庫へ自動入庫</h3>
+    <h3>📷 納品書スキャン → <span id="scan-dest-label">シンワ倉庫</span>へ自動入庫</h3>
     <div id="scan-preview-area" style="text-align:center;padding:12px 0 8px;">
       <div style="font-size:40px;">📄</div>
       <div style="font-size:13px;color:var(--muted);margin-top:4px;">納品書の写真を選択してください</div>
@@ -461,7 +461,7 @@ tr:hover td { background: #f8fafc; }
 
 <script>
 // ===== バージョン自動更新チェック =====
-const APP_VERSION = 54;
+const APP_VERSION = 55;
 function checkForUpdate(){
   fetch(location.pathname+'?_cb='+Date.now())
     .then(function(r){return r.text();})
@@ -536,7 +536,7 @@ function initLocUI(){
   var locOpts=LOCS.map(function(l){return '<option>'+l+'</option>';}).join('');
   var trFrom=document.getElementById('tr-from'); if(trFrom){ trFrom.innerHTML='<option value="">選択...</option>'+locOpts; }
   var trTo=document.getElementById('tr-to'); if(trTo){ trTo.innerHTML='<option value="">選択...</option>'+locOpts; }
-  var skLoc=document.getElementById('sk-loc'); if(skLoc){ skLoc.innerHTML=locOpts; }
+  var skLoc=document.getElementById('sk-loc'); if(skLoc){ skLoc.innerHTML=locOpts; } var sdl=document.getElementById('scan-dest-label'); if(sdl) sdl.textContent=LOCS[0];
 }
 initLocUI();
 const TYPE_LABELS = { move:'移動', add:'追加', edit:'編集', del:'削除', in:'入庫', out:'出庫', set:'直接指定' };
@@ -1111,7 +1111,7 @@ async function doScanImport(){
 
   for(const item of targets){
     const p=parts[item._key]; if(!p) continue;
-    const cur=(p.locs||{})['シンワ倉庫']||0;
+    const cur=(p.locs||{})[LOCS[0]]||0;
     const nv=cur+item.qty;
     const upd={};
     upd[`parts/${item._key}/locs/シンワ倉庫`]=nv;
@@ -1121,7 +1121,7 @@ async function doScanImport(){
     lastOpKey=item._key;
   }
 
-  toast(`✅ ${targets.length}件をシンワ倉庫へ入庫しました`);
+  toast(`✅ ${targets.length}件を${LOCS[0]}へ入庫しました`);
   btn.disabled=false; btn.textContent='✅ シンワ倉庫へ入庫';
   closeOv('ov-scan');
 }
@@ -1625,7 +1625,7 @@ function doInspectionTransfer(){
       const entry=Object.entries(parts).find(function([k,v]){return String(v.no||'').trim()===String(sub.no||'').trim();});
       if(!entry){missing.push(sub.no);return;}
       const [key,part]=entry;
-      const fCur=(part.locs||{})['シンワ倉庫']||0;
+      const fCur=(part.locs||{})[LOCS[0]]||0;
       const tCur=(part.locs||{})[loc]||0;
       upd['parts/'+key+'/locs/シンワ倉庫']=fCur-sub.qty;
       upd['parts/'+key+'/locs/'+loc]=tCur+sub.qty;
