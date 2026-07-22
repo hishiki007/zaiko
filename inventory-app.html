@@ -461,7 +461,7 @@ tr:hover td { background: #f8fafc; }
 
 <script>
 // ===== バージョン自動更新チェック =====
-const APP_VERSION = 48;
+const APP_VERSION = 49;
 function checkForUpdate(){
   fetch(location.pathname+'?_cb='+Date.now())
     .then(function(r){return r.text();})
@@ -515,6 +515,10 @@ const SITE_CONFIGS = {
   // 三重は後で追加
 };
 const _activeSite = SITE_CONFIGS[_siteParam] || null;
+if(_activeSite){
+  if(_activeSite.supabase){ localStorage.setItem('sb_url',_activeSite.supabase.url); localStorage.setItem('sb_key',_activeSite.supabase.key); }
+  if(_activeSite.anthropicKey) localStorage.setItem('anthropic_key',_activeSite.anthropicKey);
+}
 const LOCS = _activeSite ? _activeSite.locs : ['シンワ倉庫','アラン','ゆーや','しゅん','たくや'];
 function initLocUI(){
   const lt=document.getElementById('loc-tabs');
