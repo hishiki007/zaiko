@@ -1328,7 +1328,7 @@ function confirmQRDelta(key){
 
 // ===== 点検出庫機能 =====
 let inspTemplates={};
-let inspState={batch:[],pendingMachine:null,pendingType:null,pendingUnits:1,confirmed:false,partAdj:{},filterChoice:{}};
+let inspState={batch:[],pendingMachine:null,pendingType:null,pendingUnits:1,confirmed:false,partAdj:{},filterChoice:{},filterSplit:{}};
 
 function openInspection(){
   if(!currentOperator){ toast('先に作業者を選択してください'); openOperatorModal(); return; }
@@ -1457,18 +1457,29 @@ function renderInspConfirm(){
       +'<button onmousedown="event.preventDefault();" onclick="inspAdjByNo(\''+esc(item.no)+'\',1)" style="width:40px;height:40px;border-radius:10px;border:none;background:var(--primary);color:#fff;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;">＋</button>';
     if(item.isFilter){
       const altNo=item.altNo||'580301';
-      html+='<div style="padding:12px 14px;border-bottom:1px solid var(--border);">'
-        +'<div style="display:flex;align-items:flex-start;gap:8px;">'
-          +'<div style="flex:1;">'
-            +'<div style="font-size:17px;font-weight:700;font-family:monospace;margin-bottom:2px;">'+esc(dispNo)+'</div>'
-            +'<div style="font-size:12px;color:var(--muted);">カートリッジ　在庫: '+stock+'</div>'
-            +'<div style="display:flex;gap:6px;margin-top:6px;">'
-              +'<button class="btn '+(dispNo===item.no?'btn-primary':'')+'" style="padding:4px 12px;font-size:12px;" onmousedown="event.preventDefault();" onclick="inspState.filterChoice[\''+esc(item.no)+'\']=\''+esc(item.no)+'\';renderInspConfirm();">'+esc(item.no)+'</button>'
-              +'<button class="btn '+(dispNo===altNo?'btn-primary':'')+'" style="padding:4px 12px;font-size:12px;" onmousedown="event.preventDefault();" onclick="inspState.filterChoice[\''+esc(item.no)+'\']=\''+esc(altNo)+'\';renderInspConfirm();">'+esc(altNo)+'</button>'
-            +'</div>'
+      if(!inspState.filterSplit[item.no]) inspState.filterSplit[item.no]={main:item.qty,alt:0};
+      const split=inspState.filterSplit[item.no];
+      const altEntry=Object.entries(parts).find(function([k,v]){return String(v.no||'').trim()===String(altNo).trim();});
+      const altSt=altEntry&&loc?((altEntry[1].locs||{})[loc]||0):'—';
+      const total=split.main+split.alt;
+      const mkSplitRow=function(label,field,val,stk){
+        return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">'
+          +'<div style="flex:1;min-width:0;">'
+            +'<div style="font-size:15px;font-weight:700;font-family:monospace;">'+esc(label)+'</div>'
+            +'<div style="font-size:11px;color:var(--muted);">在庫: '+stk+'</div>'
           +'</div>'
-          +'<div style="display:flex;align-items:center;gap:8px;">'+qtyBtns+'</div>'
-        +'</div></div>';
+          +'<div style="display:flex;align-items:center;gap:6px;">'
+            +'<button onmousedown="event.preventDefault();" onclick="adjustFilterSplit(\''+esc(item.no)+'\',\''+field+'\',-1)" style="width:40px;height:40px;border-radius:10px;border:1px solid var(--border);background:var(--bg);font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;">ー</button>'
+            +'<span style="font-size:22px;font-weight:700;min-width:36px;text-align:center;color:'+(val>0?'var(--text)':'var(--muted)')+';">'+val+'</span>'
+            +'<button onmousedown="event.preventDefault();" onclick="adjustFilterSplit(\''+esc(item.no)+'\',\''+field+'\',1)" style="width:40px;height:40px;border-radius:10px;border:none;background:var(--primary);color:#fff;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;">＋</button>'
+          +'</div>'
+        +'</div>';
+      };
+      html+='<div style="padding:12px 14px;border-bottom:1px solid var(--border);">'
+        +'<div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:8px;">カートリッジ　合計 <span style="font-size:14px;color:var(--text);">'+total+'</span> 個</div>'
+        +mkSplitRow(item.no,'main',split.main,stock)
+        +mkSplitRow(altNo,'alt',split.alt,altSt)
+      +'</div>';
     } else {
       html+='<div style="display:flex;align-items:center;padding:12px 14px;border-bottom:1px solid var(--border);gap:8px;">'
         +'<div style="flex:1;min-width:0;">'
@@ -1496,6 +1507,13 @@ function inspAdjByNo(no,delta){
   inspState.partAdj[no]=(inspState.partAdj[no]||0)+delta;
   renderInspConfirm();
 }
+function adjustFilterSplit(partNo,field,d){
+  if(!inspState.filterSplit[partNo]) inspState.filterSplit[partNo]={main:0,alt:0};
+  var v=inspState.filterSplit[partNo][field]+d;
+  if(v<0) v=0;
+  inspState.filterSplit[partNo][field]=v;
+  renderInspConfirm();
+}
 
 function doInspectionTransfer(){
   const loc=LOCS.includes(currentOperator)?currentOperator:null;
@@ -1504,18 +1522,33 @@ function doInspectionTransfer(){
   const merged=getMergedParts();
   const upd={}; let count=0; const missing=[];
   merged.forEach(function(item){
-    const no=item.isFilter?(inspState.filterChoice[item.no]||item.no):item.no;
     if(item.qty===0) return;
-    const entry=Object.entries(parts).find(function([k,v]){return String(v.no||'').trim()===String(no||'').trim();});
-    if(!entry){missing.push(no);return;}
-    const [key,part]=entry;
-    const fCur=(part.locs||{})['シンワ倉庫']||0;
-    const tCur=(part.locs||{})[loc]||0;
-    upd['parts/'+key+'/locs/シンワ倉庫']=fCur-item.qty;
-    upd['parts/'+key+'/locs/'+loc]=tCur+item.qty;
-    upd['parts/'+key+'/updatedAt']=Date.now();
-    addHist('move',key,part.name,'点検移動('+inspState.batch.map(function(b){return b.machine+' '+b.type+'×'+b.units+'台';}).join(',')+') シンワ倉庫→'+loc+': '+fCur+'→'+(fCur-item.qty)+' / '+tCur+'→'+(tCur+item.qty));
-    count++;
+    var subitems=[];
+    if(item.isFilter){
+      var split=inspState.filterSplit[item.no]||null;
+      var altNo=item.altNo||'580301';
+      if(split&&(split.alt>0||split.main!==item.qty)){
+        if(split.main>0) subitems.push({no:item.no,qty:split.main});
+        if(split.alt>0) subitems.push({no:altNo,qty:split.alt});
+      } else {
+        subitems.push({no:inspState.filterChoice[item.no]||item.no,qty:item.qty});
+      }
+    } else {
+      subitems.push({no:item.no,qty:item.qty});
+    }
+    subitems.forEach(function(sub){
+      if(sub.qty<=0) return;
+      const entry=Object.entries(parts).find(function([k,v]){return String(v.no||'').trim()===String(sub.no||'').trim();});
+      if(!entry){missing.push(sub.no);return;}
+      const [key,part]=entry;
+      const fCur=(part.locs||{})['シンワ倉庫']||0;
+      const tCur=(part.locs||{})[loc]||0;
+      upd['parts/'+key+'/locs/シンワ倉庫']=fCur-sub.qty;
+      upd['parts/'+key+'/locs/'+loc]=tCur+sub.qty;
+      upd['parts/'+key+'/updatedAt']=Date.now();
+      addHist('move',key,part.name,'点検移動('+inspState.batch.map(function(b){return b.machine+' '+b.type+'×'+b.units+'台';}).join(',')+') シンワ倉庫→'+loc+': '+fCur+'→'+(fCur-sub.qty)+' / '+tCur+'→'+(tCur+sub.qty));
+      count++;
+    });
   });
   if(count===0&&missing.length>0){toast('❌ 部品が見つかりません: '+missing.join(', '));return;}
   db.ref().update(upd);
@@ -1529,17 +1562,32 @@ function doInspectionOut(){
   const merged=getMergedParts();
   const upd={}; let count=0; const missing=[];
   merged.forEach(function(item){
-    const no=item.isFilter?(inspState.filterChoice[item.no]||item.no):item.no;
     if(item.qty===0) return;
-    const entry=Object.entries(parts).find(function([k,v]){return String(v.no||'').trim()===String(no||'').trim();});
-    if(!entry){missing.push(no);return;}
-    const [key,part]=entry;
-    const cur=(part.locs||{})[loc]||0;
-    const nv=cur-item.qty;
-    upd['parts/'+key+'/locs/'+loc]=nv;
-    upd['parts/'+key+'/updatedAt']=Date.now();
-    addHist('out',key,part.name,'点検出庫('+inspState.batch.map(function(b){return b.machine+' '+b.type+'×'+b.units+'台';}).join(',')+'） '+loc+': '+cur+'→'+nv);
-    count++;
+    var subitems=[];
+    if(item.isFilter){
+      var split=inspState.filterSplit[item.no]||null;
+      var altNo=item.altNo||'580301';
+      if(split&&(split.alt>0||split.main!==item.qty)){
+        if(split.main>0) subitems.push({no:item.no,qty:split.main});
+        if(split.alt>0) subitems.push({no:altNo,qty:split.alt});
+      } else {
+        subitems.push({no:inspState.filterChoice[item.no]||item.no,qty:item.qty});
+      }
+    } else {
+      subitems.push({no:item.no,qty:item.qty});
+    }
+    subitems.forEach(function(sub){
+      if(sub.qty<=0) return;
+      const entry=Object.entries(parts).find(function([k,v]){return String(v.no||'').trim()===String(sub.no||'').trim();});
+      if(!entry){missing.push(sub.no);return;}
+      const [key,part]=entry;
+      const cur=(part.locs||{})[loc]||0;
+      const nv=cur-sub.qty;
+      upd['parts/'+key+'/locs/'+loc]=nv;
+      upd['parts/'+key+'/updatedAt']=Date.now();
+      addHist('out',key,part.name,'点検出庫('+inspState.batch.map(function(b){return b.machine+' '+b.type+'×'+b.units+'台';}).join(',')+'） '+loc+': '+cur+'→'+nv);
+      count++;
+    });
   });
   if(count===0&&missing.length>0){toast('❌ 部品が見つかりません: '+missing.join(', '));return;}
   db.ref().update(upd);
