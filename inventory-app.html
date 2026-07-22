@@ -1332,7 +1332,7 @@ let inspState={batch:[],pendingMachine:null,pendingType:null,pendingUnits:1,conf
 
 function openInspection(){
   if(!currentOperator){ toast('先に作業者を選択してください'); openOperatorModal(); return; }
-  inspState={batch:[],pendingMachine:null,pendingType:null,pendingUnits:1,confirmed:false,partAdj:{},filterChoice:{}};
+  inspState={batch:[],pendingMachine:null,pendingType:null,pendingUnits:1,confirmed:false,partAdj:{},filterChoice:{},filterSplit:{}};
   renderInspStep();
   open_('ov-insp');
 }
