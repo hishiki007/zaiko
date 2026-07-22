@@ -165,6 +165,7 @@ tr:hover td { background: #f8fafc; }
     <button class="btn btn-ghost btn-sm" onclick="openOperatorModal()">👤 <span id="cur-op-label">未選択</span></button>
     <button class="btn btn-ghost btn-sm" onclick="toggleHist()">全履歴</button>
     <button class="btn btn-ghost btn-sm" onclick="doLogout()">設定</button>
+    <button class="btn btn-ghost btn-sm" onclick="openApiKeyModal()" title="APIキー設定">🔑</button>
   </div>
 </header>
 
@@ -461,7 +462,15 @@ tr:hover td { background: #f8fafc; }
 
 <script>
 // ===== バージョン自動更新チェック =====
-const APP_VERSION = 60;
+const APP_VERSION = 61;
+
+(function(){
+  if(!localStorage.getItem('_v61mig')){
+    localStorage.setItem('_v61mig','1');
+    var k=localStorage.getItem('anthropic_key');
+    if(k&&k.indexOf('4tPiJgCr')>-1) localStorage.removeItem('anthropic_key');
+  }
+})();
 const SITE_CONFIGS = {
   'shinwa': {
     name: 'メリタ部品在庫',
@@ -476,7 +485,6 @@ const SITE_CONFIGS = {
       appId: ''
     },
     supabase: { url: 'https://zgrnbrlwkvhgrcupxbcw.supabase.co', key: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpncm5icmx3a3ZoZ3JjdXB4YmN3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAxNjYzMDYsImV4cCI6MjA5NTc0MjMwNn0.vFxnBcEcMHvavCsZc5FUYtFuwuJvS1RIt2u8mzQ8cXA' },
-    anthropicKey: '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'
   },
   'gifu': {
     name: 'メリタ岐阜',
@@ -491,14 +499,12 @@ const SITE_CONFIGS = {
       appId: '1:313544662733:web:447f0f9a6e858ff58b9384'
     },
     supabase: { url: 'https://zgrnbrlwkvhgrcupxbcw.supabase.co', key: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpncm5icmx3a3ZoZ3JjdXB4YmN3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAxNjYzMDYsImV4cCI6MjA5NTc0MjMwNn0.vFxnBcEcMHvavCsZc5FUYtFuwuJvS1RIt2u8mzQ8cXA' },
-    anthropicKey: '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'
   }
 };
 const _siteParam = (new URLSearchParams(location.search)).get('site') || 'shinwa';
 const _activeSite = SITE_CONFIGS[_siteParam] || SITE_CONFIGS['shinwa'] || null;
 if(_activeSite){
   if(_activeSite.supabase){ localStorage.setItem('sb_url',_activeSite.supabase.url); localStorage.setItem('sb_key',_activeSite.supabase.key); }
-  if(_activeSite.anthropicKey) localStorage.setItem('anthropic_key',_activeSite.anthropicKey);
 }
 const LOCS = _activeSite ? _activeSite.locs : ['シンワ倉庫','アラン','ゆーや','しゅん','たくや'];
 function doUpdate(){var u=new URL(location.href);u.searchParams.set("_v",Date.now());location.href=u.toString();}
@@ -1021,8 +1027,8 @@ function onScanFileSelect(e){
 }
 
 async function doScanAnalyze(){
-  const apiKey=localStorage.getItem('anthropic_key')||(_activeSite&&_activeSite.anthropicKey)||'';
-  if(!apiKey){ toast('APIキーが設定されていません。設定画面から再接続してください。'); return; }
+  const apiKey=localStorage.getItem('anthropic_key')||'';
+  if(!apiKey){ openApiKeyModal(); return; }
   if(!scanImageBase64){ toast('画像を選択してください'); return; }
 
   const btn=id('scan-analyze-btn');
@@ -1801,6 +1807,38 @@ function dl(blob,name){const a=document.createElement('a');a.href=URL.createObje
 function showErr(msg){const e=id('setup-err');e.textContent=msg;e.style.display='block';}
 let _tt;
 function toast(msg){const t=id('toast');t.textContent=msg;t.classList.add('show');clearTimeout(_tt);_tt=setTimeout(()=>t.classList.remove('show'),2500);}
+
+function openApiKeyModal(){
+  var existing=localStorage.getItem('anthropic_key');
+  id('apikey-input').value=existing||'';
+  open_('ov-apikey');
+  setTimeout(function(){id('apikey-input').focus();},300);
+}
+function saveApiKey(){
+  var key=(id('apikey-input').value||'').trim();
+  if(!key){toast('キーを入力してください');return;}
+  if(!key.startsWith('sk-ant')){toast('無効なキー形式です（sk-ant-で始まる必要があります）');return;}
+  localStorage.setItem('anthropic_key',key);
+  if(_activeSite||key) id('scan-btn').style.display='block';
+  close_('ov-apikey');
+  toast('APIキーを保存しました');
+}
 </script>
+
+<!-- APIキー設定モーダル -->
+<div id="ov-apikey" class="overlay" onclick="if(event.target===this)close_('ov-apikey')">
+  <div class="modal" style="max-width:340px">
+    <h3 style="margin-bottom:16px">🔑 Anthropic APIキー設定</h3>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:16px">納品書スキャン機能にはAnthropicのAPIキーが必要です。<br>console.anthropic.comで取得できます。</p>
+    <div class="field">
+      <label class="label">APIキー</label>
+      <input id="apikey-input" type="password" class="input" placeholder="sk-ant-api03-..." style="font-size:12px;font-family:monospace">
+    </div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button class="btn btn-primary" style="flex:1" onclick="saveApiKey()">保存して続ける</button>
+      <button class="btn btn-outline" onclick="close_('ov-apikey')">キャンセル</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
