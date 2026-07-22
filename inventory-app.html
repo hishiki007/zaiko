@@ -462,7 +462,7 @@ tr:hover td { background: #f8fafc; }
 
 <script>
 // ===== バージョン自動更新チェック =====
-const APP_VERSION = 61;
+const APP_VERSION = 62;
 
 (function(){
   if(!localStorage.getItem('_v61mig')){
@@ -1820,13 +1820,13 @@ function saveApiKey(){
   if(!key.startsWith('sk-ant')){toast('無効なキー形式です（sk-ant-で始まる必要があります）');return;}
   localStorage.setItem('anthropic_key',key);
   if(_activeSite||key) id('scan-btn').style.display='block';
-  close_('ov-apikey');
+  closeOv('ov-apikey');
   toast('APIキーを保存しました');
 }
 </script>
 
 <!-- APIキー設定モーダル -->
-<div id="ov-apikey" class="overlay" onclick="if(event.target===this)close_('ov-apikey')">
+<div id="ov-apikey" class="overlay" onclick="if(event.target===this)closeOv('ov-apikey')">
   <div class="modal" style="max-width:340px">
     <h3 style="margin-bottom:16px">🔑 Anthropic APIキー設定</h3>
     <p style="font-size:13px;color:var(--muted);margin-bottom:16px">納品書スキャン機能にはAnthropicのAPIキーが必要です。<br>console.anthropic.comで取得できます。</p>
@@ -1836,7 +1836,7 @@ function saveApiKey(){
     </div>
     <div style="display:flex;gap:8px;margin-top:16px">
       <button class="btn btn-primary" style="flex:1" onclick="saveApiKey()">保存して続ける</button>
-      <button class="btn btn-outline" onclick="close_('ov-apikey')">キャンセル</button>
+      <button class="btn btn-outline" onclick="closeOv('ov-apikey')">キャンセル</button>
     </div>
   </div>
 </div>
