@@ -472,65 +472,15 @@ function checkForUpdate(){
     })
     .catch(function(){});
 }
+function doUpdate(){location.href=location.href;}
 function showUpdateBanner(){
   if(document.getElementById('update-banner')) return;
   var div=document.createElement('div');
   div.id='update-banner';
-  div.style.cssText='position:fixed;top:0;left:0;right:0;background:#7c3aed;color:#fff;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;z-index:9999;font-size:14px;font-weight:600;box-shadow:0 2px 12px rgba(0,0,0,0.2);';
-  div.innerHTML='🆕 アプリの更新があります'
-    +'<button onclick="var u=new URL(location.href);u.searchParams.set(\'_v\',Date.now());location.href=u.toString();" style="background:#fff;color:#7c3aed;border:none;padding:8px 18px;border-radius:8px;font-weight:700;font-size:14px;cursor:pointer;" onclick="doUpdate()">今すぐ更新</button>';
+  div.style.cssText='position:fixed;top:0;left:0;right:0;z-index:9999;background:#e74c3c;color:#fff;text-align:center;padding:10px;font-size:14px;';
+  div.innerHTML=`アプリの更新があります <button onclick="doUpdate()" style="background:#fff;color:#e74c3c;border:none;padding:6px 16px;border-radius:6px;font-weight:700;cursor:pointer;">今すぐ更新</button>`;
   document.body.appendChild(div);
 }
-setTimeout(checkForUpdate, 5000);            // 起動5秒後にチェック
-setInterval(checkForUpdate, 30*60*1000);     // 以降30分ごとにチェック
-
-// ===== マルチサイト設定 =====
-const _siteParam = new URLSearchParams(location.search).get('site') || '';
-const SITE_CONFIGS = {
-  'shinwa': {
-    name: 'メリタ部品在庫',
-    locs: ['シンワ倉庫','アラン','ゆーや','しゅん','たくや'],
-    firebase: {
-      apiKey: 'AIzaSyAffminIQcel6-2y0HqulIaEd8aqs6btoo',
-      authDomain: 'mellitta.firebaseapp.com',
-      databaseURL: 'https://mellitta-default-rtdb.asia-southeast1.firebasedatabase.app',
-      projectId: 'mellitta',
-      storageBucket: 'mellitta.firebasestorage.app',
-      messagingSenderId: '',
-      appId: ''
-    },
-    supabase: {
-      url: 'https://zgrnbrlwkvhgrcupxbcw.supabase.co',
-      key: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpncm5icmx3a3ZoZ3JjdXB4YmN3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAxNjYzMDYsImV4cCI6MjA5NTc0MjMwNn0.vFxnBcEcMHvavCsZc5FUYtFuwuJvS1RIt2u8mzQ8cXA'
-    },
-    anthropicKey: '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'
-  },
-  'gifu': {
-    name: 'メリタ岐阜',
-    locs: ['岐阜倉庫','まゆみ','かいと'],
-    firebase: {
-      apiKey: 'AIzaSyD3lSagQUrlYUyXeUc6mgq5SSQw6seGc4c',
-      authDomain: 'mellitta-gifu.firebaseapp.com',
-      databaseURL: 'https://mellitta-gifu-default-rtdb.asia-southeast1.firebasedatabase.app',
-      projectId: 'mellitta-gifu',
-      storageBucket: 'mellitta-gifu.firebasestorage.app',
-      messagingSenderId: '313544662733',
-      appId: '1:313544662733:web:447f0f9a6e858ff58b9384'
-    },
-    supabase: {
-      url: 'https://zgrnbrlwkvhgrcupxbcw.supabase.co',
-      key: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpncm5icmx3a3ZoZ3JjdXB4YmN3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAxNjYzMDYsImV4cCI6MjA5NTc0MjMwNn0.vFxnBcEcMHvavCsZc5FUYtFuwuJvS1RIt2u8mzQ8cXA'
-    },
-    anthropicKey: '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'
-  }
-  // 三重は後で追加
-};
-const _activeSite = SITE_CONFIGS[_siteParam] || SITE_CONFIGS['shinwa'] || null;
-if(_activeSite){
-  if(_activeSite.supabase){ localStorage.setItem('sb_url',_activeSite.supabase.url); localStorage.setItem('sb_key',_activeSite.supabase.key); }
-  if(_activeSite.anthropicKey) localStorage.setItem('anthropic_key',_activeSite.anthropicKey);
-}
-const LOCS = _activeSite ? _activeSite.locs : ['シンワ倉庫','アラン','ゆーや','しゅん','たくや'];
 function initLocUI(){
   const lt=document.getElementById('loc-tabs');
   if(lt){ lt.innerHTML='<div class="loc-tab active" data-loc="all" onclick="setLocTab(this,\'all\')">すべて<span class="cnt" id="cnt-all">0</span></div>'+LOCS.map(function(loc,i){return '<div class="loc-tab" data-loc="'+loc+'" onclick="setLocTab(this,\''+loc+'\')">' +loc+'<span class="cnt" id="cnt-'+i+'">0</span></div>';}).join(''); }
