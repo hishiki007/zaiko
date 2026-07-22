@@ -461,7 +461,7 @@ tr:hover td { background: #f8fafc; }
 
 <script>
 // ===== バージョン自動更新チェック =====
-const APP_VERSION = 49;
+const APP_VERSION = 50;
 function checkForUpdate(){
   fetch(location.pathname+'?_cb='+Date.now())
     .then(function(r){return r.text();})
@@ -595,7 +595,7 @@ function initFB(cfg) {
       });
       id('setup').style.display='none';
       id('app').style.display='block';
-      if(localStorage.getItem('anthropic_key')) id('scan-btn').style.display='inline-block';
+      if(localStorage.getItem('anthropic_key')||(_activeSite&&_activeSite.anthropicKey)) id('scan-btn').style.display='inline-block';
       const sbUrl2=localStorage.getItem('sb_url'), sbKey2=localStorage.getItem('sb_key');
       if(sbUrl2 && sbKey2){ supabaseUrl=sbUrl2.replace(/\/$/,''); supabaseKey=sbKey2; }
     }).catch(e => { showErr('認証エラー: '+e.message); });
@@ -1021,7 +1021,7 @@ function onScanFileSelect(e){
 }
 
 async function doScanAnalyze(){
-  const apiKey=localStorage.getItem('anthropic_key');
+  const apiKey=localStorage.getItem('anthropic_key')||(_activeSite&&_activeSite.anthropicKey)||'';
   if(!apiKey){ toast('APIキーが設定されていません。設定画面から再接続してください。'); return; }
   if(!scanImageBase64){ toast('画像を選択してください'); return; }
 
