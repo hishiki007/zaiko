@@ -461,7 +461,7 @@ tr:hover td { background: #f8fafc; }
 
 <script>
 // ===== バージョン自動更新チェック =====
-const APP_VERSION = 47;
+const APP_VERSION = 48;
 function checkForUpdate(){
   fetch(location.pathname+'?_cb='+Date.now())
     .then(function(r){return r.text();})
@@ -486,6 +486,19 @@ setInterval(checkForUpdate, 30*60*1000);     // 以降30分ごとにチェック
 // ===== マルチサイト設定 =====
 const _siteParam = new URLSearchParams(location.search).get('site') || '';
 const SITE_CONFIGS = {
+  'shinwa': {
+    name: 'メリタ部品在庫',
+    locs: ['シンワ倉庫','アラン','ゆーや','しゅん','たくや'],
+    firebase: {
+      apiKey: 'AIzaSyAffminIQcel6-2y0HqulIaEd8aqs6btoo',
+      authDomain: 'mellitta.firebaseapp.com',
+      databaseURL: 'https://mellitta-default-rtdb.asia-southeast1.firebasedatabase.app',
+      projectId: 'mellitta',
+      storageBucket: 'mellitta.firebasestorage.app',
+      messagingSenderId: '',
+      appId: ''
+    }
+  },
   'gifu': {
     name: 'メリタ岐阜',
     locs: ['岐阜倉庫','まゆみ','かいと'],
