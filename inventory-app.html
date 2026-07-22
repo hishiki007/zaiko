@@ -461,7 +461,8 @@ tr:hover td { background: #f8fafc; }
 
 <script>
 // ===== バージョン自動更新チェック =====
-const APP_VERSION = 57;
+const APP_VERSION = 58;
+function doUpdate(){var u=new URL(location.href);u.searchParams.set("_v",Date.now());location.href=u.toString();}
 function checkForUpdate(){
   fetch(location.pathname+'?_cb='+Date.now())
     .then(function(r){return r.text();})
@@ -477,7 +478,7 @@ function showUpdateBanner(){
   div.id='update-banner';
   div.style.cssText='position:fixed;top:0;left:0;right:0;background:#7c3aed;color:#fff;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;z-index:9999;font-size:14px;font-weight:600;box-shadow:0 2px 12px rgba(0,0,0,0.2);';
   div.innerHTML='🆕 アプリの更新があります'
-    +'<button onclick="var u=new URL(location.href);u.searchParams.set(\'_v\',Date.now());location.href=u.toString();" style="background:#fff;color:#7c3aed;border:none;padding:8px 18px;border-radius:8px;font-weight:700;font-size:14px;cursor:pointer;" onclick="var u=new URL(location.href);u.searchParams.set('_r',Date.now());location.href=u.toString()">今すぐ更新</button>';
+    +'<button onclick="var u=new URL(location.href);u.searchParams.set(\'_v\',Date.now());location.href=u.toString();" style="background:#fff;color:#7c3aed;border:none;padding:8px 18px;border-radius:8px;font-weight:700;font-size:14px;cursor:pointer;" onclick="doUpdate()">今すぐ更新</button>';
   document.body.appendChild(div);
 }
 setTimeout(checkForUpdate, 5000);            // 起動5秒後にチェック
