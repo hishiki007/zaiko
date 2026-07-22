@@ -159,7 +159,7 @@ tr:hover td { background: #f8fafc; }
 <body>
 
 <header>
-  <h1>🔧 部品在庫管理</h1>
+  <h1 id="app-title">🔧 部品在庫管理</h1>
   <div class="header-right">
     <span class="dot" id="dot"></span>
     <button class="btn btn-ghost btn-sm" onclick="openOperatorModal()">👤 <span id="cur-op-label">未選択</span></button>
@@ -489,7 +489,26 @@ function showUpdateBanner(){
 setTimeout(checkForUpdate, 5000);            // 起動5秒後にチェック
 setInterval(checkForUpdate, 30*60*1000);     // 以降30分ごとにチェック
 
-const LOCS = ['シンワ倉庫','アラン','ゆーや','しゅん','たくや'];
+// ===== マルチサイト設定 =====
+const _siteParam = new URLSearchParams(location.search).get('site') || '';
+const SITE_CONFIGS = {
+  'gifu': {
+    name: 'メリタ岐阜',
+    locs: ['岐阜倉庫','まゆみ','かいと'],
+    firebase: {
+      apiKey: 'AIzaSyD3lSagQUrlYUyXeUc6mgq5SSQw6seGc4c',
+      authDomain: 'mellitta-gifu.firebaseapp.com',
+      databaseURL: 'https://mellitta-gifu-default-rtdb.asia-southeast1.firebasedatabase.app',
+      projectId: 'mellitta-gifu',
+      storageBucket: 'mellitta-gifu.firebasestorage.app',
+      messagingSenderId: '313544662733',
+      appId: '1:313544662733:web:447f0f9a6e858ff58b9384'
+    }
+  }
+  // 三重は後で追加
+};
+const _activeSite = SITE_CONFIGS[_siteParam] || null;
+const LOCS = _activeSite ? _activeSite.locs : ['シンワ倉庫','アラン','ゆーや','しゅん','たくや'];
 const TYPE_LABELS = { move:'移動', add:'追加', edit:'編集', del:'削除', in:'入庫', out:'出庫', set:'直接指定' };
 let db=null, parts={}, hist=[];
 let curLoc='all', skMode='in', lastOpKey=null;
@@ -564,6 +583,18 @@ function initFB(cfg) {
 }
 function doLogout() { if(confirm('設定画面に戻りますか？')){localStorage.removeItem('inv_cfg');location.reload();} }
 function tryAutoConnect(){
+  // 名前付きサイト（?site=gifu など）はコード内の設定で自動接続
+  if(_activeSite){
+    if(typeof firebase==='undefined'){ setTimeout(tryAutoConnect,300); return; }
+    id('app-title').textContent='🔧 '+_activeSite.name;
+    document.title=_activeSite.name+' 在庫管理';
+    const sbU=localStorage.getItem('sb_url'), sbK=localStorage.getItem('sb_key');
+    if(sbU) id('f-sb-url').value=sbU;
+    if(sbK) id('f-sb-key').value=sbK;
+    initFB(_activeSite.firebase);
+    return;
+  }
+  // デフォルト（シンワ）: localStorageから読み込み
   const saved=localStorage.getItem('inv_cfg');
   if(!saved) return;
   try{
