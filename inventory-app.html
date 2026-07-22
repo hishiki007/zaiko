@@ -467,7 +467,7 @@ tr:hover td { background: #f8fafc; }
 
 <script>
 // ===== バージョン自動更新チェック =====
-const APP_VERSION = 40;
+const APP_VERSION = 41;
 function checkForUpdate(){
   fetch(location.pathname+'?_cb='+Date.now())
     .then(function(r){return r.text();})
@@ -483,7 +483,7 @@ function showUpdateBanner(){
   div.id='update-banner';
   div.style.cssText='position:fixed;bottom:0;left:0;right:0;background:#7c3aed;color:#fff;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;z-index:9999;font-size:14px;font-weight:600;box-shadow:0 -2px 12px rgba(0,0,0,0.2);';
   div.innerHTML='🆕 アプリの更新があります'
-    +'<button onclick="location.reload(true)" style="background:#fff;color:#7c3aed;border:none;padding:8px 18px;border-radius:8px;font-weight:700;font-size:14px;cursor:pointer;">今すぐ更新</button>';
+    +'<button onclick="var u=new URL(location.href);u.searchParams.set(\'_v\',Date.now());location.href=u.toString();" style="background:#fff;color:#7c3aed;border:none;padding:8px 18px;border-radius:8px;font-weight:700;font-size:14px;cursor:pointer;">今すぐ更新</button>';
   document.body.appendChild(div);
 }
 setTimeout(checkForUpdate, 5000);            // 起動5秒後にチェック
@@ -518,7 +518,7 @@ let supabaseUrl='', supabaseKey='';
 const PHOTO_BUCKET='parts-photos';
 let photoPartKey=null;
 
-let OPERATORS = JSON.parse(localStorage.getItem('operators_v1')||'["シンワ倉庫","アラン","ゆーや","しゅん","たくや"]');
+let OPERATORS = _activeSite ? _activeSite.locs : JSON.parse(localStorage.getItem('operators_v1')||'["シンワ倉庫","アラン","ゆーや","しゅん","たくや"]');
 let currentOperator = localStorage.getItem('current_operator')||null;
 function openOperatorModal(){ renderOperatorList(); open_('ov-operator'); }
 function renderOperatorList(){
