@@ -463,7 +463,7 @@ tr:hover td { background: #f8fafc; }
 
 <script>
 // ===== バージョン自動更新チェック =====
-const APP_VERSION = 65;
+const APP_VERSION = 66;
 
 (function(){
   if(!localStorage.getItem('_v61mig')){
@@ -500,6 +500,20 @@ const SITE_CONFIGS = {
       appId: '1:313544662733:web:447f0f9a6e858ff58b9384'
     },
     supabase: { url: 'https://zgrnbrlwkvhgrcupxbcw.supabase.co', key: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpncm5icmx3a3ZoZ3JjdXB4YmN3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAxNjYzMDYsImV4cCI6MjA5NTc0MjMwNn0.vFxnBcEcMHvavCsZc5FUYtFuwuJvS1RIt2u8mzQ8cXA' },
+  },
+  'mie': {
+    name: 'メリタ三重',
+    locs: ['三重倉庫','やよい','しんのすけ'],
+    firebase: {
+      apiKey: 'AIzaSyDTrYUISrEcpd-J7uzXqzVgRgHRYRd7fWg',
+      authDomain: 'mellitta-mie.firebaseapp.com',
+      databaseURL: 'https://mellitta-mie-default-rtdb.asia-southeast1.firebasedatabase.app',
+      projectId: 'mellitta-mie',
+      storageBucket: 'mellitta-mie.firebasestorage.app',
+      messagingSenderId: '1063862225831',
+      appId: '1:1063862225831:web:63c4713ede5c9366844482'
+    },
+    supabase: { url: 'https://zgrnbrlwkvhgrcupxbcw.supabase.co', key: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpncm5icmx3a3ZoZ3JjdXB4YmN3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAxNjYzMDYsImV4cCI6MjA5NTc0MjMwNn0.vFxnBcEcMHvavCsZc5FUYtFuwuJvS1RIt2u8mzQ8cXA' }
   }
 };
 const _siteParam = (new URLSearchParams(location.search)).get('site') || 'shinwa';
