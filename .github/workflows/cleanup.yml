@@ -1,4 +1,4 @@
-name: Delete app2
+name: Cleanup
 on:
   workflow_dispatch:
 jobs:
@@ -8,10 +8,10 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
-      - name: Remove app2 directory
+      - name: Remove .github directory
         run: |
           git config user.email "github-actions@github.com"
           git config user.name "GitHub Actions"
-          git rm -r app2/
-          git commit -m "Remove app2 directory"
+          git rm -r .github/
+          git commit -m "Remove .github directory"
           git push
