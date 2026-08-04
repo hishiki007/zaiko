@@ -575,6 +575,7 @@ let photoPartKey=null;
 
 let OPERATORS = _activeSite ? _activeSite.locs : JSON.parse(localStorage.getItem('operators_v1')||'["シンワ倉庫","アラン","ゆーや","しゅん","たくや"]');
 let currentOperator = localStorage.getItem('current_operator')||null;
+if(currentOperator && LOCS && !LOCS.includes(currentOperator)){currentOperator=null;}
 function openOperatorModal(){ renderOperatorList(); open_('ov-operator'); }
 function renderOperatorList(){
   id('operator-list').innerHTML = OPERATORS.map((name,i)=>`
