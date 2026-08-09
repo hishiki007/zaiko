@@ -317,6 +317,7 @@ tr:hover td { background: #f8fafc; }
       <input type="number" id="sk-qty" value="1" min="0" style="font-size:20px;text-align:center;padding:10px;" oninput="updateSkPreview()" />
     </div>
     <div class="transfer-preview" id="sk-preview"></div>
+    <div style="padding:0 4px 8px;"><textarea id="sk-memo" placeholder="備考（任意）" rows="2" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;font-size:1rem;resize:none;"></textarea></div>
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeOv('ov-stock')">キャンセル</button>
       <button class="btn btn-success" onclick="doStockChange()">確定</button>
@@ -357,6 +358,7 @@ tr:hover td { background: #f8fafc; }
     <div id="scan-results" style="margin-top:14px;"></div>
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeOv('ov-scan')">キャンセル</button>
+      <div id="scan-memo-div" style="display:none;padding:4px 0;"><textarea id="scan-memo" placeholder="備考（任意）" rows="2" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;font-size:1rem;resize:none;"></textarea></div>
       <button class="btn btn-success" id="scan-confirm-btn" onclick="doScanImport()" style="display:none;">✅ <span id="scan-import-label">シンワ倉庫</span>へ入庫</button>
     </div>
   </div>
@@ -790,7 +792,8 @@ function doStockChange(){
   const upd={}; upd[`parts/${key}/locs/${loc}`]=nv; upd[`parts/${key}/updatedAt`]=Date.now();
   db.ref().update(upd);
   const label=skMode==='in'?'入庫':skMode==='out'?'出庫':'直接指定';
-  addHist(skMode==='in'?'in':skMode==='out'?'out':'set',key,p.name,`${label} ${loc}: ${cur}→${nv}`);
+  const skMemo=id('sk-memo').value.trim();id('sk-memo').value='';
+  addHist(skMode==='in'?'in':skMode==='out'?'out':'set',key,p.name,`${label} ${loc}: ${cur}→${nv}`,skMemo);
   lastOpKey=key;
   toast(`✅ ${loc}: ${nv}`);
   closeOv('ov-stock');
@@ -883,12 +886,12 @@ function renderPartHistModal(){
         <span class="phi-type type-${h.type||'edit'}">${TYPE_LABELS[h.type]||h.type}</span>
         <span style="color:var(--muted);font-size:12px;">${fmtDate(h.ts)}</span>
       </div>
-      <div class="phi-detail">${esc(h.detail||'')}${h.operator?` · 👤${esc(h.operator)}`:''}</div>
+      <div class="phi-detail">${esc(h.detail||'')}${h.operator?` · 👤${esc(h.operator)}`:''}${h.memo?`<div style="font-size:0.85rem;color:var(--muted);margin-top:2px;">📝 ${esc(h.memo)}</div>`:''}</div>
     </div>`).join('');
 }
 
-function addHist(type,key,name,detail){
-  db.ref('history').push({type, partKey:key, name, detail, ts:Date.now(), operator: currentOperator||null});
+function addHist(type,key,name,detail,memo=''){
+  db.ref('history').push({type, partKey:key, name, detail, memo:memo||'', ts:Date.now(), operator: currentOperator||null});
 }
 function renderHist(){
   const list=id('hist-list');
@@ -897,7 +900,7 @@ function renderHist(){
     const p=h.partKey?parts[h.partKey]:null;
     const no=p?p.no:(h.no||'');
     const nameStr=`${esc(h.name||'')}${no?` <span style="font-size:10px;color:var(--muted);font-family:monospace;">[${esc(no)}]</span>`:''}`;
-    return `<div class="hi hi-${h.type}"><div class="hi-top"><span class="hi-name">${nameStr}</span><span class="hi-time">${fmtDate(h.ts)}</span></div><div class="hi-detail">[${TYPE_LABELS[h.type]||h.type}] ${esc(h.detail||'')}${h.operator?` · 👤${esc(h.operator)}`:''}</div></div>`;
+    return `<div class="hi hi-${h.type}"><div class="hi-top"><span class="hi-name">${nameStr}</span><span class="hi-time">${fmtDate(h.ts)}</span></div><div class="hi-detail">[${TYPE_LABELS[h.type]||h.type}] ${esc(h.detail||'')}${h.operator?` · 👤${esc(h.operator)}`:''}${h.memo?`<div style="font-size:0.85rem;color:var(--muted);margin-top:2px;">📝 ${esc(h.memo)}</div>`:''}</div></div>`;
   }).join('');
 }
 function toggleHist(){ id('hist-panel').classList.toggle('open'); }
@@ -1035,7 +1038,7 @@ function openScan(){
   scanImageBase64=null; scanImageMime=null; scanParsedItems=[];
   id('scan-analyze-area').style.display='none';
   id('scan-results').innerHTML='';
-  id('scan-confirm-btn').style.display='none';
+  id('scan-confirm-btn').style.display='none'; if(id('scan-memo-div'))id('scan-memo-div').style.display='none';
   id('scan-img-preview').style.display='none';
   id('scan-file').value='';
   open_('ov-scan');
@@ -1051,7 +1054,7 @@ function onScanFileSelect(e){
     id('scan-img-preview').style.display='block';
     id('scan-analyze-area').style.display='block';
     id('scan-results').innerHTML='';
-    id('scan-confirm-btn').style.display='none';
+    id('scan-confirm-btn').style.display='none'; if(id('scan-memo-div'))id('scan-memo-div').style.display='none';
   };
   reader.readAsDataURL(file);
 }
@@ -1125,7 +1128,7 @@ function renderScanResults(){
     return item;
   });
   id('scan-results').innerHTML=html;
-  id('scan-confirm-btn').style.display='inline-block';
+  id('scan-confirm-btn').style.display='inline-block'; id('scan-memo-div').style.display='block';
 }
 
 async function doScanImport(){
@@ -1135,6 +1138,7 @@ async function doScanImport(){
   const btn=id('scan-confirm-btn');
   btn.disabled=true; btn.textContent='入庫中...';
 
+  const scanMemo=id('scan-memo')?.value?.trim()||''; if(id('scan-memo')) id('scan-memo').value='';
   for(const item of targets){
     const p=parts[item._key]; if(!p) continue;
     const cur=(p.locs||{})[LOCS[0]]||0;
@@ -1143,7 +1147,7 @@ async function doScanImport(){
     upd[`parts/${item._key}/locs/シンワ倉庫`]=nv;
     upd[`parts/${item._key}/updatedAt`]=Date.now();
     await db.ref().update(upd);
-    addHist('in',item._key,p.name,`入庫（納品書スキャン）シンワ倉庫: ${cur}→${nv}`);
+    addHist('in',item._key,p.name,`入庫（納品書スキャン）シンワ倉庫: ${cur}→${nv}`,scanMemo);
     lastOpKey=item._key;
   }
 
