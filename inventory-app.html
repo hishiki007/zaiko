@@ -889,7 +889,7 @@ function renderPartHistModal(){
 function addHist(type,key,name,detail,memo=''){
   db.ref('history').push({type, partKey:key, name, detail, memo:memo||'', ts:Date.now(), operator: currentOperator||null});
 }
-function setHistFilter(f){histFilter=f;['all','in','out','move','add'].forEach(function(t){var el=id('hf-'+t);if(el){el.style.background=t===f?'var(--primary)':'';el.style.color=t===f?'white':'';el.style.fontWeight=t===f?'700'||'';el.style.borderColor=t===f?'var(--primary)':'';}});renderHist();}
+function setHistFilter(f){histFilter=f;['all','in','out','move','add'].forEach(function(t){var el=id('hf-'+t);if(el){el.style.background=t===f?'var(--primary)':'';el.style.color=t===f?'white':'';el.style.fontWeight=t===f?'700':'';el.style.borderColor=t===f?'var(--primary)':'';}});renderHist();}
 function renderHist(){
   const list=id('hist-list');
   if(!hist.length){list.innerHTML='<div style="text-align:center;padding:24px;color:var(--muted);font-size:13px;">履歴はまだありません</div>';return;}
