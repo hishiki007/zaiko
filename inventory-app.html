@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>メリタ部品在庫管理</title>
 <link rel="apple-touch-icon" href="icon.png" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -1530,10 +1530,10 @@ function getMergedParts(){
 function _batchTagsHtml(){
   if(inspState.batch.length===0) return '';
   return '<div style="margin-bottom:12px;">'
-    +'<div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:6px;">準備中の点検</div>'
+    +'<div style="font-size:13px;font-weight:700;color:var(--muted);margin-bottom:6px;">準備中の点検</div>'
     +'<div style="display:flex;flex-wrap:wrap;gap:6px;">'
     +inspState.batch.map(function(b,i){
-      return '<span style="background:#ede9fe;color:#7c3aed;border-radius:999px;padding:5px 12px;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:6px;">'
+      return '<span style="background:#ede9fe;color:#7c3aed;border-radius:999px;padding:5px 12px;font-size:14px;font-weight:600;display:inline-flex;align-items:center;gap:6px;">'
         +esc(b.machine)+' '+esc(b.type)+' ×'+b.units+'台'
         +'<button style="background:none;border:none;color:#7c3aed;font-size:14px;cursor:pointer;padding:0;line-height:1;" onmousedown="event.preventDefault();" onclick="removeFromBatch('+i+')">×</button>'
         +'</span>';
@@ -1559,9 +1559,9 @@ function renderInspStep(){
     if(machines.length===0){body.innerHTML='<p style="color:var(--muted);text-align:center;padding:24px 0;">テンプレート未登録です。<br>「マスタ編集」から追加してください。</p>';return;}
     body.innerHTML=batchHtml
       +(hasBatch?'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">'+clearBtn+'</div>':'')
-      +'<p style="font-size:13px;color:var(--muted);margin-bottom:8px;">機種を選択</p>'
+      +'<p style="font-size:15px;color:var(--muted);margin-bottom:8px;">機種を選択</p>'
       +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">'
-      +machines.map(function(m){return '<button class="btn btn-primary" style="font-size:14px;padding:12px;" onmousedown="event.preventDefault();" onclick="setPendingMachine(\''+esc(m)+'\')">'+esc(m)+'</button>';}).join('')
+      +machines.map(function(m){return '<button class="btn btn-primary" style="font-size:16px;padding:14px;" onmousedown="event.preventDefault();" onclick="setPendingMachine(\''+esc(m)+'\')">'+esc(m)+'</button>';}).join('')
       +'</div>'
       +(hasBatch?'<button class="btn" style="width:100%;padding:14px;font-size:15px;font-weight:700;background:#7c3aed;color:#fff;border-radius:12px;" onmousedown="event.preventDefault();" onclick="inspState.confirmed=true;inspState.partAdj={};inspState.filterChoice={};renderInspStep();">✅ 出庫内容（合算）を確認する</button>':'');
 
@@ -1572,10 +1572,10 @@ function renderInspStep(){
         +'<button class="btn btn-ghost btn-sm" onmousedown="event.preventDefault();" onclick="inspState.pendingMachine=null;renderInspStep();">← 機種選択に戻る</button>'
         +clearBtn
       +'</div>'
-      +'<div style="font-size:16px;font-weight:700;margin-bottom:10px;">'+esc(inspState.pendingMachine)+'</div>'
-      +'<p style="font-size:13px;color:var(--muted);margin-bottom:8px;">点検種別を選択</p>'
+      +'<div style="font-size:18px;font-weight:700;margin-bottom:10px;">'+esc(inspState.pendingMachine)+'</div>'
+      +'<p style="font-size:15px;color:var(--muted);margin-bottom:8px;">点検種別を選択</p>'
       +'<div style="display:flex;flex-wrap:wrap;gap:8px;">'
-      +types.map(function(t){return '<button class="btn btn-warning" style="font-size:14px;padding:10px 22px;" onmousedown="event.preventDefault();" onclick="setPendingType(\''+esc(t)+'\')">'+esc(t)+'</button>';}).join('')
+      +types.map(function(t){return '<button class="btn btn-warning" style="font-size:16px;padding:12px 24px;" onmousedown="event.preventDefault();" onclick="setPendingType(\''+esc(t)+'\')">'+esc(t)+'</button>';}).join('')
       +'</div>';
 
   } else {
@@ -1584,8 +1584,8 @@ function renderInspStep(){
         +'<button class="btn btn-ghost btn-sm" onmousedown="event.preventDefault();" onclick="inspState.pendingType=null;renderInspStep();">← 種別選択に戻る</button>'
         +clearBtn
       +'</div>'
-      +'<div style="font-size:16px;font-weight:700;">'+esc(inspState.pendingMachine)+'</div>'
-      +'<div style="font-size:13px;color:var(--muted);margin-bottom:12px;">'+esc(inspState.pendingType)+'　台数を選択</div>'
+      +'<div style="font-size:18px;font-weight:700;">'+esc(inspState.pendingMachine)+'</div>'
+      +'<div style="font-size:15px;color:var(--muted);margin-bottom:12px;">'+esc(inspState.pendingType)+'　台数を選択</div>'
       +'<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;">'
       +[1,2,3,4,5,6,7,8,9,10].map(function(n){return '<button class="btn btn-primary" style="font-size:20px;padding:14px 0;font-weight:700;" onmousedown="event.preventDefault();" onclick="addToBatch('+n+')">'+n+'</button>';}).join('')
       +'</div>';
@@ -1618,7 +1618,7 @@ function renderInspConfirm(){
       +'<button class="btn btn-ghost btn-sm" style="color:var(--primary);" onmousedown="event.preventDefault();" onclick="inspState.confirmed=false;inspState.pendingMachine=null;inspState.pendingType=null;inspState.pendingUnits=1;renderInspStep();">＋ 他の機種・点検も追加する</button>'
       +'<button class="btn btn-ghost btn-sm" style="color:var(--danger);" onmousedown="event.preventDefault();" onclick="inspState.batch=[];inspState.confirmed=false;renderInspStep();">🗑 クリア</button>'
     +'</div>'
-    +'<div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:6px;">出庫内容（合算）</div>'
+    +'<div style="font-size:13px;font-weight:700;color:var(--muted);margin-bottom:6px;">出庫内容（合算）</div>'
     +'<div style="background:var(--card);border-radius:12px;overflow:hidden;margin-bottom:12px;">';
 
   merged.forEach(function(item){
@@ -1640,7 +1640,7 @@ function renderInspConfirm(){
         return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">'
           +'<div style="flex:1;min-width:0;">'
             +'<div style="font-size:15px;font-weight:700;font-family:monospace;">'+esc(label)+'</div>'
-            +'<div style="font-size:11px;color:var(--muted);">在庫: '+stk+'</div>'
+            +'<div style="font-size:13px;color:var(--muted);">在庫: '+stk+'</div>'
           +'</div>'
           +'<div style="display:flex;align-items:center;gap:6px;">'
             +'<button onmousedown="event.preventDefault();" onclick="adjustFilterSplit(\''+esc(item.no)+'\',\''+field+'\',-1)" style="width:40px;height:40px;border-radius:10px;border:1px solid var(--border);background:var(--bg);font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;">ー</button>'
@@ -1650,7 +1650,7 @@ function renderInspConfirm(){
         +'</div>';
       };
       html+='<div style="padding:12px 14px;border-bottom:1px solid var(--border);">'
-        +'<div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:8px;">カートリッジ　合計 <span style="font-size:14px;color:var(--text);">'+total+'</span> 個</div>'
+        +'<div style="font-size:13px;font-weight:700;color:var(--muted);margin-bottom:8px;">カートリッジ　合計 <span style="font-size:15px;color:var(--text);">'+total+'</span> 個</div>'
         +mkSplitRow(item.no,'main',split.main,stock)
         +mkSplitRow(altNo,'alt',split.alt,altSt)
       +'</div>';
@@ -1658,7 +1658,7 @@ function renderInspConfirm(){
       html+='<div style="display:flex;align-items:center;padding:12px 14px;border-bottom:1px solid var(--border);gap:8px;">'
         +'<div style="flex:1;min-width:0;">'
           +'<div style="font-size:17px;font-weight:700;font-family:monospace;">'+esc(item.no)+'</div>'
-          +'<div style="font-size:12px;color:var(--muted);">'+esc(pname)+'　在庫: '+stock+'</div>'
+          +'<div style="font-size:13px;color:var(--muted);">'+esc(pname)+'　在庫: '+stock+'</div>'
         +'</div>'
         +'<div style="display:flex;align-items:center;gap:8px;">'+qtyBtns+'</div>'
       +'</div>';
