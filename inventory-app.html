@@ -37,7 +37,7 @@ header h1 { font-size: 16px; font-weight: 700; }
 .btn-outline { background: white; color: var(--text); border: 1px solid var(--border); }
 .btn-outline:hover { background: var(--bg); }
 .btn-danger { background: var(--danger); color: white; }
-.btn-sm { padding: 5px 10px; font-size: 12px; }
+.btn-sm { padding: 3px 8px; font-size: 12px; }
 .btn-ghost { background: rgba(255,255,255,0.15); color: white; border: 1px solid rgba(255,255,255,0.3); }
 .btn-ghost:hover { background: rgba(255,255,255,0.25); }
 
@@ -241,7 +241,8 @@ tr:hover td { background: #f8fafc; }
     <span>全操作履歴</span>
     <button class="panel-close" onclick="toggleHist()">✕</button>
   </div>
-  <div class="hist-list" id="hist-list"></div>
+  <div style="display:flex;gap:4px;padding:6px 10px;flex-wrap:wrap;border-bottom:1px solid var(--border);"><button class="btn btn-sm" id="hf-all" onclick="setHistFilter('all')" style="font-size:11px;background:var(--primary);color:white;">全て</button><button class="btn btn-sm" id="hf-in" onclick="setHistFilter('in')" style="font-size:11px;">入庫</button><button class="btn btn-sm" id="hf-out" onclick="setHistFilter('out')" style="font-size:11px;">出庫</button><button class="btn btn-sm" id="hf-move" onclick="setHistFilter('move')" style="font-size:11px;">移動</button><button class="btn btn-sm" id="hf-add" onclick="setHistFilter('add')" style="font-size:11px;">追加</button></div>
+<div class="hist-list" id="hist-list"></div>
 </div>
 
 <div class="overlay" id="ov-part" onclick="closeOv('ov-part',event)">
@@ -569,6 +570,7 @@ initLocUI();
 const TYPE_LABELS = { move:'移動', add:'追加', edit:'編集', del:'削除', in:'入庫', out:'出庫', set:'直接指定' };
 let db=null, parts={}, hist=[];
 let curLoc='all', skMode='in', lastOpKey=null;
+let histFilter='all';
 let partHistRef=null;
 let openPartKey=null;
 let supabaseUrl='', supabaseKey='';
@@ -712,13 +714,7 @@ function render(){
       <td style="font-weight:600;"><div style="display:flex;align-items:center;">${thumb}<span>${esc(r.name||'')}${isLast?` <span style="font-size:11px;background:#dbeafe;color:var(--primary);padding:1px 6px;border-radius:999px;margin-left:4px;">操作済</span>`:''}</span></div></td>
       <td>${locCell}</td>
       <td><span class="qty-cell ${total===0?'zero':''}">${total}</span></td>
-      <td><div class="acts">
-        <button class="btn btn-outline btn-sm" onclick="openStock('${r.k}')">在庫変更</button>
-        <button class="btn btn-warning btn-sm" onclick="openTransfer('${r.k}')">↔ 移動</button>
-        <button class="btn btn-outline btn-sm" onclick="openPartHist('${r.k}')">📋 履歴</button>
-        <button class="btn btn-outline btn-sm" onclick="openEdit('${r.k}')">編集</button>
-        <button class="btn btn-sm" style="color:var(--danger);border:1px solid var(--border);background:white;" onclick="delPart('${r.k}','${esc(r.name||'')}')">削除</button>
-      </div></td>
+      <td><button class="btn btn-outline btn-sm" onclick="openPartMenu('${r.k}','${esc(r.name||'')}')">&#8942;</button></td>
     </tr>`;
   }).join('');
 }
@@ -893,10 +889,13 @@ function renderPartHistModal(){
 function addHist(type,key,name,detail,memo=''){
   db.ref('history').push({type, partKey:key, name, detail, memo:memo||'', ts:Date.now(), operator: currentOperator||null});
 }
+function setHistFilter(f){histFilter=f;['all','in','out','move','add'].forEach(function(t){var el=id('hf-'+t);if(el){el.style.background=t===f?'var(--primary)':'';el.style.color=t===f?'white':'';el.style.fontWeight=t===f?'700'||'';el.style.borderColor=t===f?'var(--primary)':'';}});renderHist();}
 function renderHist(){
   const list=id('hist-list');
   if(!hist.length){list.innerHTML='<div style="text-align:center;padding:24px;color:var(--muted);font-size:13px;">履歴はまだありません</div>';return;}
-  list.innerHTML=hist.map(h=>{
+  const _fh=histFilter==='all'?hist:hist.filter(h=>h.type===histFilter);
+  if(!_fh.length){list.innerHTML='<div style="text-align:center;padding:24px;color:var(--muted);font-size:13px;">該当する履歴がありません</div>';return;}
+  list.innerHTML=_fh.map(h=>{
     const p=h.partKey?parts[h.partKey]:null;
     const no=p?p.no:(h.no||'');
     const nameStr=`${esc(h.name||'')}${no?` <span style="font-size:10px;color:var(--muted);font-family:monospace;">[${esc(no)}]</span>`:''}`;
@@ -1900,6 +1899,8 @@ function closeOv(ovId,e){
 function dl(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();document.body.removeChild(a);}
 function showErr(msg){const e=id('setup-err');e.textContent=msg;e.style.display='block';}
 let _tt;
+var _pmKey='',_pmName='';
+function openPartMenu(k,n){_pmKey=k;_pmName=n;open_('ov-pmenu');}
 function toast(msg){const t=id('toast');t.textContent=msg;t.classList.add('show');clearTimeout(_tt);_tt=setTimeout(()=>t.classList.remove('show'),2500);}
 
 function openApiKeyModal(){
@@ -2024,6 +2025,20 @@ function renderCompare(filter){
     <div style="margin-top:12px;text-align:right">
       <button class="btn btn-outline" onclick="closeOv('ov-compare')">閉じる</button>
     </div>
+  </div>
+</div>
+
+<div id="ov-pmenu" class="overlay" onclick="closeOv('ov-pmenu',event)">
+  <div class="modal" style="max-width:300px;padding:16px;">
+    <h3 style="font-size:15px;margin-bottom:12px;">操作</h3>
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      <button class="btn btn-outline" style="width:100%;padding:10px;" onclick="closeOv('ov-pmenu');openStock(_pmKey)">在庫変更</button>
+      <button class="btn btn-warning" style="width:100%;padding:10px;" onclick="closeOv('ov-pmenu');openTransfer(_pmKey)">&#8596; 移動</button>
+      <button class="btn btn-outline" style="width:100%;padding:10px;" onclick="closeOv('ov-pmenu');openPartHist(_pmKey)">&#128203; 履歴</button>
+      <button class="btn btn-outline" style="width:100%;padding:10px;" onclick="closeOv('ov-pmenu');openEdit(_pmKey)">編集</button>
+      <button class="btn" style="width:100%;padding:10px;color:var(--danger);border:1px solid var(--border);background:white;" onclick="closeOv('ov-pmenu');delPart(_pmKey,_pmName)">削除</button>
+    </div>
+    <button class="btn btn-outline" style="width:100%;margin-top:8px;" onclick="closeOv('ov-pmenu')">キャンセル</button>
   </div>
 </div>
 </body>
