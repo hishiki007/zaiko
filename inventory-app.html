@@ -211,7 +211,7 @@ tr:hover td { background: #f8fafc; }
         <tr>
           <th>部品番号</th>
           <th>部品名</th>
-          <th id="th-loc">保管場所 / 数量</th>
+          <th id="th-loc">数量</th>
           <th>合計</th>
           <th>操作</th>
         </tr>
@@ -671,7 +671,7 @@ function tryAutoConnect(){
 }
 tryAutoConnect();
 
-function setLocTab(el,loc){document.querySelectorAll('.loc-tab').forEach(t=>t.classList.remove('active'));el.classList.add('active');curLoc=loc;id('th-loc').textContent=loc==='all'?'保管場所 / 数量':loc+' の数量';render();}
+function setLocTab(el,loc){document.querySelectorAll('.loc-tab').forEach(t=>t.classList.remove('active'));el.classList.add('active');curLoc=loc;id('th-loc').textContent='数量';render();}
 function updateTabs(){
   id('cnt-all').textContent=Object.keys(parts).length;
   LOCS.forEach((l,i)=>{ id('cnt-'+i).textContent=Object.values(parts).filter(p=>p.locs&&(p.locs[l]||0)>0).length; });
@@ -707,7 +707,7 @@ function render(){
       : (supabaseUrl ? `<span onclick="openPhotoModal('${r.k}')" style="display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:5px;border:1px dashed var(--border);background:var(--bg);font-size:16px;margin-right:6px;cursor:pointer;vertical-align:middle;flex-shrink:0;">📷</span>` : '');
     return `<tr id="row-${r.k}" style="${isLast?'background:#eff6ff;border-left:3px solid var(--primary);':''}">
       <td style="font-family:monospace;font-size:12px;color:var(--muted);">${esc(r.no||'—')}</td>
-      <td style="font-weight:600;"><div style="display:flex;align-items:center;">${thumb}<span>${esc(r.name||'')}${isLast?` <span style="font-size:11px;background:#dbeafe;color:var(--primary);padding:1px 6px;border-radius:999px;margin-left:4px;">操作済</span>`:''}</span></div></td>
+      <td style="font-weight:600;max-width:130px;"><div style="display:flex;align-items:center;min-width:0;overflow:hidden;">${thumb}<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(r.name||'')}${isLast?` <span style="font-size:11px;background:#dbeafe;color:var(--primary);padding:1px 6px;border-radius:999px;margin-left:4px;">操作済</span>`:''}</span></div></td>
       <td>${locCell}</td>
       <td><span class="qty-cell ${total===0?'zero':''}">${total}</span></td>
       <td><button class="btn btn-outline btn-sm" onclick="openPartMenu('${r.k}','${esc(r.name||'')}')">&#8942;</button></td>
