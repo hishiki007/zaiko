@@ -178,7 +178,6 @@ tr:hover td { background: #f8fafc; }
     <div class="field"><label>Auth Domain</label><input id="f-auth" placeholder="xxx.firebaseapp.com" /></div>
     <div class="field"><label>Database URL</label><input id="f-db" placeholder="https://xxx.firebasedatabase.app" /></div>
     <div class="field"><label>Project ID</label><input id="f-pid" placeholder="your-project-id" /></div>
-    <div class="field"><label>Anthropic API Key（納品書スキャン用・任意）</label><input id="f-anthropic" placeholder="sk-ant-api03-..." type="password" /></div>
     <div class="field"><label>Supabase URL（写真保存用・任意）</label><input id="f-sb-url" placeholder="https://xxxx.supabase.co" /></div>
     <div class="field"><label>Supabase Anon Key（写真保存用・任意）</label><input id="f-sb-key" placeholder="eyJ..." type="password" /></div>
     <button class="btn btn-primary" style="width:100%;padding:11px;margin-top:4px;" onclick="connect()">接続して開始 →</button>
@@ -612,8 +611,6 @@ function connect() {
   if(typeof firebase==='undefined'){ showErr('Firebase読み込み中です。少し待ってから再度押してください。'); return; }
   const cfg = { apiKey:id('f-key').value.trim(), authDomain:id('f-auth').value.trim(), databaseURL:id('f-db').value.trim(), projectId:id('f-pid').value.trim() };
   if (!cfg.apiKey||!cfg.databaseURL||!cfg.projectId) { showErr('API Key、Database URL、Project ID は必須です'); return; }
-  const anthropicKey=id('f-anthropic').value.trim();
-  if(anthropicKey) localStorage.setItem('anthropic_key', anthropicKey);
   const sbUrl=id('f-sb-url').value.trim(), sbKey=id('f-sb-key').value.trim();
   if(sbUrl) localStorage.setItem('sb_url', sbUrl);
   if(sbKey) localStorage.setItem('sb_key', sbKey);
@@ -663,8 +660,7 @@ function tryAutoConnect(){
     id('f-auth').value=c.authDomain||'';
     id('f-db').value=c.databaseURL||'';
     id('f-pid').value=c.projectId||'';
-    const ak=localStorage.getItem('anthropic_key'); if(ak) id('f-anthropic').value=ak;
-    const sbU=localStorage.getItem('sb_url'); if(sbU) id('f-sb-url').value=sbU;
+        const sbU=localStorage.getItem('sb_url'); if(sbU) id('f-sb-url').value=sbU;
     const sbK=localStorage.getItem('sb_key'); if(sbK) id('f-sb-key').value=sbK;
     if(typeof firebase==='undefined'){
       setTimeout(tryAutoConnect, 300);
