@@ -671,7 +671,7 @@ function tryAutoConnect(){
 }
 tryAutoConnect();
 
-function setLocTab(el,loc){document.querySelectorAll('.loc-tab').forEach(t=>t.classList.remove('active'));el.classList.add('active');curLoc=loc;id('th-loc').textContent='数量';render();}
+function setLocTab(el,loc){document.querySelectorAll('.loc-tab').forEach(t=>t.classList.remove('active'));el.classList.add('active');curLoc=loc;id('th-loc').textContent=loc==='all'?'数量':loc;render();}
 function updateTabs(){
   id('cnt-all').textContent=Object.keys(parts).length;
   LOCS.forEach((l,i)=>{ id('cnt-'+i).textContent=Object.values(parts).filter(p=>p.locs&&(p.locs[l]||0)>0).length; });
