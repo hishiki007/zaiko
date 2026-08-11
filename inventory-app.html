@@ -565,6 +565,8 @@ function initLocUI(){
   var trTo=document.getElementById('tr-to'); if(trTo){ trTo.innerHTML='<option value="">選択...</option>'+locOpts; }
   var skLoc=document.getElementById('sk-loc'); if(skLoc){ skLoc.innerHTML=locOpts; } var sdl=document.getElementById('scan-dest-label'); if(sdl) sdl.textContent=LOCS[0]; var sil=document.getElementById('scan-import-label'); if(sil) sil.textContent=currentOperator||LOCS[0]; var sdl=document.getElementById('scan-dest-label'); if(sdl) sdl.textContent=LOCS[0]; var sil=document.getElementById('scan-import-label'); if(sil) sil.textContent=currentOperator||LOCS[0];
 }
+let currentOperator = localStorage.getItem('current_operator')||null;
+if(currentOperator && LOCS && !LOCS.includes(currentOperator)){currentOperator=null;}
 initLocUI();
 const TYPE_LABELS = { move:'移動', add:'追加', edit:'編集', del:'削除', in:'入庫', out:'出庫', set:'直接指定' };
 let db=null, parts={}, hist=[];
@@ -577,8 +579,6 @@ const PHOTO_BUCKET='parts-photos';
 let photoPartKey=null;
 
 let OPERATORS = _activeSite ? _activeSite.locs : JSON.parse(localStorage.getItem('operators_v1')||'["シンワ倉庫","アラン","ゆーや","しゅん","たくや"]');
-let currentOperator = localStorage.getItem('current_operator')||null;
-if(currentOperator && LOCS && !LOCS.includes(currentOperator)){currentOperator=null;}
 function openOperatorModal(){ renderOperatorList(); open_('ov-operator'); }
 function renderOperatorList(){
   id('operator-list').innerHTML = OPERATORS.map((name,i)=>`
