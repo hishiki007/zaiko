@@ -359,7 +359,7 @@ tr:hover td { background: #f8fafc; }
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeOv('ov-scan')">キャンセル</button>
       <div id="scan-memo-div" style="display:none;padding:4px 0;"><textarea id="scan-memo" placeholder="備考（任意）" rows="2" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;font-size:1rem;resize:none;"></textarea></div>
-      <button class="btn btn-success" id="scan-confirm-btn" onclick="doScanImport()" style="display:none;">✅ <span id="scan-import-label">三重倉庫</span>へ入庫</button>
+      <button class="btn btn-success" id="scan-confirm-btn" onclick="doScanImport()" style="display:none;">✅ <span id="scan-import-label">シンワ倉庫</span>へ入庫</button>
     </div>
   </div>
 </div>
@@ -563,7 +563,7 @@ function initLocUI(){
   var locOpts=LOCS.map(function(l){return '<option>'+l+'</option>';}).join('');
   var trFrom=document.getElementById('tr-from'); if(trFrom){ trFrom.innerHTML='<option value="">選択...</option>'+locOpts; }
   var trTo=document.getElementById('tr-to'); if(trTo){ trTo.innerHTML='<option value="">選択...</option>'+locOpts; }
-  var skLoc=document.getElementById('sk-loc'); if(skLoc){ skLoc.innerHTML=locOpts; } var sdl=document.getElementById('scan-dest-label'); if(sdl) sdl.textContent=LOCS[0]; var sil=document.getElementById('scan-import-label'); if(sil) sil.textContent='三重倉庫'; var sdl=document.getElementById('scan-dest-label'); if(sdl) sdl.textContent=LOCS[0]; var sil=document.getElementById('scan-import-label'); if(sil) sil.textContent='三重倉庫';
+  var skLoc=document.getElementById('sk-loc'); if(skLoc){ skLoc.innerHTML=locOpts; } var sdl=document.getElementById('scan-dest-label'); if(sdl) sdl.textContent=LOCS[0]; var sil=document.getElementById('scan-import-label'); if(sil) sil.textContent=currentOperator||LOCS[0]; var sdl=document.getElementById('scan-dest-label'); if(sdl) sdl.textContent=LOCS[0]; var sil=document.getElementById('scan-import-label'); if(sil) sil.textContent=currentOperator||LOCS[0];
 }
 initLocUI();
 const TYPE_LABELS = { move:'移動', add:'追加', edit:'編集', del:'削除', in:'入庫', out:'出庫', set:'直接指定' };
@@ -1139,10 +1139,10 @@ async function doScanImport(){
     const cur=(p.locs||{})[LOCS[0]]||0;
     const nv=cur+item.qty;
     const upd={};
-    upd[`parts/${item._key}/locs/三重倉庫`]=nv;
+    upd[`parts/${item._key}/locs/${currentOperator||LOCS[0]}`]=nv;
     upd[`parts/${item._key}/updatedAt`]=Date.now();
     await db.ref().update(upd);
-    addHist('in',item._key,p.name,`入庫（納品書スキャン）三重倉庫: ${cur}→${nv}`,scanMemo);
+    addHist('in',item._key,p.name,`入庫（納品書スキャン）${currentOperator||LOCS[0]}: ${cur}→${nv}`,scanMemo);
     lastOpKey=item._key;
   }
 
