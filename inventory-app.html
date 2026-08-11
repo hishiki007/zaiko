@@ -1139,10 +1139,10 @@ async function doScanImport(){
     const cur=(p.locs||{})[LOCS[0]]||0;
     const nv=cur+item.qty;
     const upd={};
-    upd[`parts/${item._key}/locs/シンワ倉庫`]=nv;
+    upd[`parts/${item._key}/locs/${curLoc}`]=nv;
     upd[`parts/${item._key}/updatedAt`]=Date.now();
     await db.ref().update(upd);
-    addHist('in',item._key,p.name,`入庫（納品書スキャン）シンワ倉庫: ${cur}→${nv}`,scanMemo);
+    addHist('in',item._key,p.name,`入庫（納品書スキャン）${curLoc}: ${cur}→${nv}`,scanMemo);
     lastOpKey=item._key;
   }
 
