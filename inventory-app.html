@@ -563,7 +563,7 @@ function initLocUI(){
   var locOpts=LOCS.map(function(l){return '<option>'+l+'</option>';}).join('');
   var trFrom=document.getElementById('tr-from'); if(trFrom){ trFrom.innerHTML='<option value="">選択...</option>'+locOpts; }
   var trTo=document.getElementById('tr-to'); if(trTo){ trTo.innerHTML='<option value="">選択...</option>'+locOpts; }
-  var skLoc=document.getElementById('sk-loc'); if(skLoc){ skLoc.innerHTML=locOpts; } var sdl=document.getElementById('scan-dest-label'); if(sdl) sdl.textContent=LOCS[0]; var sil=document.getElementById('scan-import-label'); if(sil) sil.textContent=currentOperator||LOCS[0]; var sdl=document.getElementById('scan-dest-label'); if(sdl) sdl.textContent=LOCS[0]; var sil=document.getElementById('scan-import-label'); if(sil) sil.textContent=currentOperator||LOCS[0];
+  var skLoc=document.getElementById('sk-loc'); if(skLoc){ skLoc.innerHTML=locOpts; } var sdl=document.getElementById('scan-dest-label'); if(sdl) sdl.textContent=LOCS[0]; var sil=document.getElementById('scan-import-label'); if(sil) sil.textContent=LOCS[0]; var sdl=document.getElementById('scan-dest-label'); if(sdl) sdl.textContent=LOCS[0]; var sil=document.getElementById('scan-import-label'); if(sil) sil.textContent=LOCS[0];
 }
 let currentOperator = localStorage.getItem('current_operator')||null;
 if(currentOperator && LOCS && !LOCS.includes(currentOperator)){currentOperator=null;}
@@ -1139,10 +1139,10 @@ async function doScanImport(){
     const cur=(p.locs||{})[LOCS[0]]||0;
     const nv=cur+item.qty;
     const upd={};
-    upd[`parts/${item._key}/locs/${currentOperator||LOCS[0]}`]=nv;
+    upd[`parts/${item._key}/locs/${LOCS[0]}`]=nv;
     upd[`parts/${item._key}/updatedAt`]=Date.now();
     await db.ref().update(upd);
-    addHist('in',item._key,p.name,`入庫（納品書スキャン）${currentOperator||LOCS[0]}: ${cur}→${nv}`,scanMemo);
+    addHist('in',item._key,p.name,`入庫（納品書スキャン）${LOCS[0]}: ${cur}→${nv}`,scanMemo);
     lastOpKey=item._key;
   }
 
