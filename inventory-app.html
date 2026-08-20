@@ -6,6 +6,8 @@
 <title>メリタ部品在庫管理</title>
 <link rel="icon" type="image/png" href="iicom.png" />
 <link rel="apple-touch-icon" href="iicom.png" />
+<link rel="manifest" href="manifest.json" />
+<meta name="theme-color" content="#2563eb" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-title" content="メリタ在庫" />
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -139,9 +141,17 @@ tr:hover td { background: #f8fafc; }
 #toast.show { opacity: 1; }
 
 @media (max-width: 600px) {
+  header { min-width: 0; }
+  header h1 { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .header-right { min-width: 0; flex: 1 1 auto; justify-content: flex-start; overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .header-right::-webkit-scrollbar { display: none; }
+  .header-right > * { flex-shrink: 0; }
+  #ai-auth-btn { max-width: min(46vw, 180px); min-width: 0; overflow: hidden; text-overflow: ellipsis; }
   .toolbar { padding: 8px 12px; }
   .table-wrap { padding: 10px 12px 16px; }
-  #hist-panel { width: 100%; }
+  #hist-panel { width: 100%; transform: none; visibility: hidden; opacity: 0; pointer-events: none; transition: opacity 0.2s, visibility 0s linear 0.2s; }
+  #hist-panel.open { transform: none; visibility: visible; opacity: 1; pointer-events: auto; transition: opacity 0.2s; }
+  #toast { max-width: calc(100vw - 24px); overflow: hidden; text-overflow: ellipsis; }
 }
 
 .scan-drop { border: 2px dashed var(--border); border-radius: 10px; padding: 24px 16px; text-align: center; cursor: pointer; transition: border-color 0.2s; background: var(--bg); }
@@ -478,11 +488,15 @@ tr:hover td { background: #f8fafc; }
 // ===== バージョン自動更新チェック =====
 const APP_VERSION = 68;
 
+const IS_COMMON_AI_HOSTING_ORIGIN=location.origin==='https://shinwa-service-ai-dev.firebaseapp.com'||
+  location.origin==='https://shinwa-service-ai-dev.web.app';
+const melittaStorageKey=key=>IS_COMMON_AI_HOSTING_ORIGIN?'melitta_'+key:key;
+
 (function(){
-  if(!localStorage.getItem('_v61mig')){
-    localStorage.setItem('_v61mig','1');
-    var k=localStorage.getItem('anthropic_key');
-    if(k&&k.indexOf('4tPiJgCr')>-1) localStorage.removeItem('anthropic_key');
+  if(!localStorage.getItem(melittaStorageKey('_v61mig'))){
+    localStorage.setItem(melittaStorageKey('_v61mig'),'1');
+    var k=localStorage.getItem(melittaStorageKey('anthropic_key'));
+    if(k&&k.indexOf('4tPiJgCr')>-1) localStorage.removeItem(melittaStorageKey('anthropic_key'));
   }
 })();
 const SITE_CONFIGS = {
@@ -556,7 +570,7 @@ const _isLocalProductionAiAuthTest=(_urlParams.get('ai')==='production-auth')&&
   (location.hostname==='localhost'||location.hostname==='127.0.0.1');
 const USE_COMMON_AI=COMMON_AI_ENABLED_SITES[ACTIVE_SITE_ID]===true||_isLocalAiTest||_isLocalProductionAiAuthTest;
 if(_activeSite){
-  if(_activeSite.supabase){ localStorage.setItem('sb_url',_activeSite.supabase.url); localStorage.setItem('sb_key',_activeSite.supabase.key); }
+  if(_activeSite.supabase){ localStorage.setItem(melittaStorageKey('sb_url'),_activeSite.supabase.url); localStorage.setItem(melittaStorageKey('sb_key'),_activeSite.supabase.key); }
 }
 const LOCS = _activeSite ? _activeSite.locs : ['シンワ倉庫','アラン','ゆーや','しゅん','たくや'];
 function doUpdate(){var u=new URL(location.href);u.searchParams.set("_v",Date.now());location.href=u.toString();}
@@ -586,7 +600,7 @@ function initLocUI(){
   var trTo=document.getElementById('tr-to'); if(trTo){ trTo.innerHTML='<option value="">選択...</option>'+locOpts; }
   var skLoc=document.getElementById('sk-loc'); if(skLoc){ skLoc.innerHTML=locOpts; } var sdl=document.getElementById('scan-dest-label'); if(sdl) sdl.textContent=LOCS[0]; var sil=document.getElementById('scan-import-label'); if(sil) sil.textContent=LOCS[0]; var sdl=document.getElementById('scan-dest-label'); if(sdl) sdl.textContent=LOCS[0]; var sil=document.getElementById('scan-import-label'); if(sil) sil.textContent=LOCS[0];
 }
-let currentOperator = localStorage.getItem('current_operator')||null;
+let currentOperator = localStorage.getItem(melittaStorageKey('current_operator'))||null;
 if(currentOperator && LOCS && !LOCS.includes(currentOperator)){currentOperator=null;}
 initLocUI();
 const TYPE_LABELS = { move:'移動', add:'追加', edit:'編集', del:'削除', in:'入庫', out:'出庫', set:'直接指定' };
@@ -613,6 +627,47 @@ let bootstrapAuthorizedUserCallable=null, analyzeInvoiceCallable=null;
 let commonAiAuthorizedUid=null;
 const commonAiBootstrapPromises=new Map();
 let commonAiAuthError=null;
+let commonAiPersistencePromise=null;
+const COMMON_AI_DIAGNOSTICS_KEY='melitta_ai_auth_diagnostics';
+const COMMON_AI_REDIRECT_PENDING_KEY='melitta_ai_redirect_pending';
+
+function isStandaloneMode(){
+  return !!((window.matchMedia&&window.matchMedia('(display-mode: standalone)').matches)||window.navigator.standalone===true);
+}
+
+function recordAiAuthDiagnostic(event,error){
+  const entry={
+    at:new Date().toISOString(),
+    event:String(event),
+    standalone:isStandaloneMode(),
+    origin:location.origin,
+    errorCode:error&&error.code?String(error.code):null
+  };
+  try{
+    const current=JSON.parse(sessionStorage.getItem(COMMON_AI_DIAGNOSTICS_KEY)||'[]');
+    current.push(entry);
+    sessionStorage.setItem(COMMON_AI_DIAGNOSTICS_KEY,JSON.stringify(current.slice(-40)));
+  }catch(_error){}
+  console.info('[common-ai-auth]',entry);
+}
+
+window.getCommonAiAuthDiagnostics=()=>{
+  try{return JSON.parse(sessionStorage.getItem(COMMON_AI_DIAGNOSTICS_KEY)||'[]');}
+  catch(_error){return [];}
+};
+
+function prepareAiPersistence(){
+  if(commonAiPersistencePromise) return commonAiPersistencePromise;
+  if(!commonAiAuth) return Promise.reject({code:'ai/not-initialized'});
+  commonAiPersistencePromise=commonAiAuth.setPersistence(firebase.auth.Auth.Persistence.LOCAL)
+    .then(()=>{recordAiAuthDiagnostic('persistence_success');})
+    .catch(error=>{
+      recordAiAuthDiagnostic('persistence_failure',error);
+      commonAiAuthError=error;
+      throw {code:'ai/persistence-failed',cause:error};
+    });
+  return commonAiPersistencePromise;
+}
 
 function formatAiError(error){
   const code=String(error&&error.code||'').replace(/^functions\//,'');
@@ -630,7 +685,8 @@ function formatAiError(error){
     'ai/redirect-started':'Googleログイン画面へ移動します',
     'auth/popup-closed-by-user':'Googleログインがキャンセルされました',
     'auth/popup-blocked':'Googleログイン画面を開けませんでした',
-    'auth/unauthorized-domain':'このドメインはGoogleログインに許可されていません'
+    'auth/unauthorized-domain':'このドメインはGoogleログインに許可されていません',
+    'ai/persistence-failed':'ログイン状態を端末へ保存できません。Safariの設定を確認して、もう一度お試しください'
   };
   return messages[code]||'AI解析中にエラーが発生しました';
 }
@@ -656,28 +712,31 @@ async function bootstrapAiUser(user){
   if(commonAiBootstrapPromises.has(user.uid)) return commonAiBootstrapPromises.get(user.uid);
   commonAiAuthError=null;
   const bootstrapPromise=(async()=>{
+    recordAiAuthDiagnostic('bootstrap_start');
     // emailは送信しない。CallableはFirebase Authトークンだけを使用する。
     await bootstrapAuthorizedUserCallable({});
     commonAiAuthorizedUid=user.uid;
+    recordAiAuthDiagnostic('bootstrap_success');
     updateAiAuthUi(user);
     return user;
   })();
   commonAiBootstrapPromises.set(user.uid,bootstrapPromise);
   try{return await bootstrapPromise;}
-  catch(error){commonAiAuthError=error;throw error;}
+  catch(error){commonAiAuthError=error;recordAiAuthDiagnostic('bootstrap_failure',error);throw error;}
   finally{commonAiBootstrapPromises.delete(user.uid);}
 }
 
 function shouldUseRedirectSignIn(){
-  return /iPhone|iPad|iPod/i.test(navigator.userAgent)||
-    (window.matchMedia&&window.matchMedia('(display-mode: standalone)').matches)||
-    window.navigator.standalone===true;
+  return /iPhone|iPad|iPod/i.test(navigator.userAgent)||isStandaloneMode();
 }
 
 async function startAiSignIn(){
   if(!commonAiAuth) throw {code:'ai/not-initialized'};
+  await prepareAiPersistence();
   const provider=new firebase.auth.GoogleAuthProvider();
   if(shouldUseRedirectSignIn()){
+    recordAiAuthDiagnostic('redirect_start');
+    try{sessionStorage.setItem(COMMON_AI_REDIRECT_PENDING_KEY,'1');}catch(_error){}
     await commonAiAuth.signInWithRedirect(provider);
     throw {code:'ai/redirect-started'};
   }
@@ -688,6 +747,8 @@ async function startAiSignIn(){
     return result.user;
   }catch(error){
     if(String(error&&error.code||'')==='auth/popup-blocked'){
+      recordAiAuthDiagnostic('redirect_start');
+      try{sessionStorage.setItem(COMMON_AI_REDIRECT_PENDING_KEY,'1');}catch(_error){}
       await commonAiAuth.signInWithRedirect(provider);
       throw {code:'ai/redirect-started'};
     }
@@ -732,23 +793,41 @@ function initCommonAi(){
     }
     bootstrapAuthorizedUserCallable=commonAiFunctions.httpsCallable('bootstrapAuthorizedUser');
     analyzeInvoiceCallable=commonAiFunctions.httpsCallable('analyzeInvoice');
-    commonAiAuth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(()=>{});
+    commonAiPersistencePromise=null;
+    prepareAiPersistence().catch(error=>{
+      updateAiAuthUi(null);
+      toast(formatAiError(error));
+    });
     commonAiAuth.onAuthStateChanged(user=>{
       if(!user){commonAiAuthorizedUid=null;commonAiAuthError=null;updateAiAuthUi(null);return;}
-      updateAiAuthUi(user);
-      bootstrapAiUser(user).catch(error=>{
-        commonAiAuthorizedUid=null;
+      recordAiAuthDiagnostic('auth_user_obtained');
+      prepareAiPersistence().then(()=>{
         updateAiAuthUi(user);
-        toast(formatAiError(error));
-      });
+        return bootstrapAiUser(user);
+      }).catch(error=>{
+          commonAiAuthorizedUid=null;
+          updateAiAuthUi(user);
+          toast(formatAiError(error));
+        });
     });
-    commonAiAuth.getRedirectResult().then(result=>{
+    prepareAiPersistence().then(()=>{
+      let pending=false;
+      try{pending=sessionStorage.getItem(COMMON_AI_REDIRECT_PENDING_KEY)==='1';}catch(_error){}
+      if(pending) recordAiAuthDiagnostic('redirect_return');
+      return commonAiAuth.getRedirectResult();
+    }).then(result=>{
+      try{sessionStorage.removeItem(COMMON_AI_REDIRECT_PENDING_KEY);}catch(_error){}
       if(result&&result.user){
+        recordAiAuthDiagnostic('redirect_result_success');
         return bootstrapAiUser(result.user).then(()=>{
           toast('✅ 共通AIへログインしました。共用端末では作業後にAIログアウトしてください');
         });
       }
-    }).catch(error=>toast(formatAiError(error)));
+      recordAiAuthDiagnostic('redirect_result_empty');
+    }).catch(error=>{
+      recordAiAuthDiagnostic('redirect_result_failure',error);
+      toast(formatAiError(error));
+    });
   }catch(error){
     console.error('共通AI Firebaseの初期化に失敗しました');
     commonAiApp=null; commonAiAuth=null;
@@ -758,7 +837,7 @@ function initCommonAi(){
 
 initCommonAi();
 
-let OPERATORS = _activeSite ? _activeSite.locs : JSON.parse(localStorage.getItem('operators_v1')||'["シンワ倉庫","アラン","ゆーや","しゅん","たくや"]');
+let OPERATORS = _activeSite ? _activeSite.locs : JSON.parse(localStorage.getItem(melittaStorageKey('operators_v1'))||'["シンワ倉庫","アラン","ゆーや","しゅん","たくや"]');
 function openOperatorModal(){ renderOperatorList(); open_('ov-operator'); }
 function renderOperatorList(){
   id('operator-list').innerHTML = OPERATORS.map((name,i)=>`
@@ -769,7 +848,7 @@ function renderOperatorList(){
 }
 function selectOperator(name){
   currentOperator=name;
-  localStorage.setItem('current_operator',name);
+  localStorage.setItem(melittaStorageKey('current_operator'),name);
   id('cur-op-label').textContent=name;
   closeOv('ov-operator');
   const tab=document.querySelector('.loc-tab[data-loc="'+name+'"]');
@@ -779,7 +858,7 @@ function renameOperator(i){
   const nn=prompt('名前を編集',OPERATORS[i]);
   if(nn&&nn.trim()){
     const old=OPERATORS[i]; OPERATORS[i]=nn.trim();
-    localStorage.setItem('operators_v1',JSON.stringify(OPERATORS));
+    localStorage.setItem(melittaStorageKey('operators_v1'),JSON.stringify(OPERATORS));
     if(currentOperator===old) selectOperator(OPERATORS[i]);
     renderOperatorList();
   }
@@ -792,9 +871,9 @@ function connect() {
   const cfg = { apiKey:id('f-key').value.trim(), authDomain:id('f-auth').value.trim(), databaseURL:id('f-db').value.trim(), projectId:id('f-pid').value.trim() };
   if (!cfg.apiKey||!cfg.databaseURL||!cfg.projectId) { showErr('API Key、Database URL、Project ID は必須です'); return; }
   const sbUrl=id('f-sb-url').value.trim(), sbKey=id('f-sb-key').value.trim();
-  if(sbUrl) localStorage.setItem('sb_url', sbUrl);
-  if(sbKey) localStorage.setItem('sb_key', sbKey);
-  localStorage.setItem('inv_cfg', JSON.stringify(cfg));
+  if(sbUrl) localStorage.setItem(melittaStorageKey('sb_url'), sbUrl);
+  if(sbKey) localStorage.setItem(melittaStorageKey('sb_key'), sbKey);
+  localStorage.setItem(melittaStorageKey('inv_cfg'), JSON.stringify(cfg));
   initFB(cfg);
 }
 async function initFB(cfg) {
@@ -813,12 +892,12 @@ async function initFB(cfg) {
       });
       id('setup').style.display='none';
       id('app').style.display='block';
-      if(USE_COMMON_AI||localStorage.getItem('anthropic_key')||(_activeSite&&_activeSite.anthropicKey)) id('scan-btn').style.display='inline-block';
-      const sbUrl2=localStorage.getItem('sb_url'), sbKey2=localStorage.getItem('sb_key');
+      if(USE_COMMON_AI||localStorage.getItem(melittaStorageKey('anthropic_key'))||(_activeSite&&_activeSite.anthropicKey)) id('scan-btn').style.display='inline-block';
+      const sbUrl2=localStorage.getItem(melittaStorageKey('sb_url')), sbKey2=localStorage.getItem(melittaStorageKey('sb_key'));
       if(sbUrl2 && sbKey2){ supabaseUrl=sbUrl2.replace(/\/$/,''); supabaseKey=sbKey2; }
   } catch(e) { showErr('接続エラー: '+e.message); }
 }
-function doLogout() { if(confirm('設定画面に戻りますか？')){localStorage.removeItem('inv_cfg');location.reload();} }
+function doLogout() { if(confirm('設定画面に戻りますか？')){localStorage.removeItem(melittaStorageKey('inv_cfg'));location.reload();} }
 function tryAutoConnect(){
   // localhost限定の本番AI認証確認。既存在庫Firebaseへは接続しない。
   if(_isLocalProductionAiAuthTest){
@@ -835,14 +914,14 @@ function tryAutoConnect(){
     if(typeof firebase==='undefined'){ setTimeout(tryAutoConnect,300); return; }
     id('app-title').textContent='🔧 '+_activeSite.name;
     document.title=_activeSite.name+' 在庫管理';
-    const sbU=localStorage.getItem('sb_url'), sbK=localStorage.getItem('sb_key');
+    const sbU=localStorage.getItem(melittaStorageKey('sb_url')), sbK=localStorage.getItem(melittaStorageKey('sb_key'));
     if(sbU) id('f-sb-url').value=sbU;
     if(sbK) id('f-sb-key').value=sbK;
     initFB(_activeSite.firebase);
     return;
   }
   // デフォルト（シンワ）: localStorageから読み込み
-  const saved=localStorage.getItem('inv_cfg');
+  const saved=localStorage.getItem(melittaStorageKey('inv_cfg'));
   if(!saved) return;
   try{
     const c=JSON.parse(saved);
@@ -850,8 +929,8 @@ function tryAutoConnect(){
     id('f-auth').value=c.authDomain||'';
     id('f-db').value=c.databaseURL||'';
     id('f-pid').value=c.projectId||'';
-        const sbU=localStorage.getItem('sb_url'); if(sbU) id('f-sb-url').value=sbU;
-    const sbK=localStorage.getItem('sb_key'); if(sbK) id('f-sb-key').value=sbK;
+        const sbU=localStorage.getItem(melittaStorageKey('sb_url')); if(sbU) id('f-sb-url').value=sbU;
+    const sbK=localStorage.getItem(melittaStorageKey('sb_key')); if(sbK) id('f-sb-key').value=sbK;
     if(typeof firebase==='undefined'){
       setTimeout(tryAutoConnect, 300);
       return;
@@ -1317,7 +1396,7 @@ async function doCommonAiScanAnalyze(){
 }
 
 async function doLegacyScanAnalyze(){
-  const apiKey=localStorage.getItem('anthropic_key')||'';
+  const apiKey=localStorage.getItem(melittaStorageKey('anthropic_key'))||'';
   if(!apiKey){openApiKeyModal();throw {code:'legacy/api-key-required',message:'Anthropic APIキーを設定してください'};}
   const res=await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
@@ -2164,7 +2243,7 @@ function openPartMenu(k,n){_pmKey=k;_pmName=n;open_('ov-pmenu');}
 function toast(msg){const t=id('toast');t.textContent=msg;t.classList.add('show');clearTimeout(_tt);_tt=setTimeout(()=>t.classList.remove('show'),2500);}
 
 function openApiKeyModal(){
-  var existing=localStorage.getItem('anthropic_key');
+  var existing=localStorage.getItem(melittaStorageKey('anthropic_key'));
   id('apikey-input').value=existing||'';
   open_('ov-apikey');
   setTimeout(function(){id('apikey-input').focus();},300);
@@ -2173,7 +2252,7 @@ function saveApiKey(){
   var key=(id('apikey-input').value||'').trim();
   if(!key){toast('キーを入力してください');return;}
   if(!key.startsWith('sk-ant')){toast('無効なキー形式です（sk-ant-で始まる必要があります）');return;}
-  localStorage.setItem('anthropic_key',key);
+  localStorage.setItem(melittaStorageKey('anthropic_key'),key);
   if(_activeSite||key) id('scan-btn').style.display='block';
   closeOv('ov-apikey');
   toast('APIキーを保存しました');
