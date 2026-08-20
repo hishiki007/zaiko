@@ -11,6 +11,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-functions-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <!-- jsQR は openQR() 時に動的ロード -->
 <style>
@@ -155,6 +156,8 @@ tr:hover td { background: #f8fafc; }
 .scan-badge { font-size: 10px; padding: 2px 6px; border-radius: 999px; margin-left: 6px; }
 .scan-badge.ok { background: #dcfce7; color: var(--success); }
 .scan-badge.ng { background: #fee2e2; color: var(--danger); }
+.ai-auth-test-mode header .header-right > *:not(#ai-auth-btn) { display: none !important; }
+#ai-auth-test-notice { display:none;max-width:620px;margin:32px auto;padding:20px;background:#eff6ff;border:1px solid #93c5fd;border-radius:12px;color:#1e3a8a;line-height:1.7; }
 </style>
 </head>
 <body>
@@ -165,6 +168,7 @@ tr:hover td { background: #f8fafc; }
     <span class="dot" id="dot"></span>
     <button class="btn btn-ghost btn-sm" onclick="openOperatorModal()">👤 <span id="cur-op-label">未選択</span></button>
     <button class="btn btn-ghost btn-sm" onclick="toggleHist()">全履歴</button>
+    <button class="btn btn-ghost btn-sm" onclick="toggleAiAuth()" id="ai-auth-btn" style="display:none;">AIログイン</button>
     <button class="btn btn-ghost btn-sm" onclick="doLogout()">設定</button>
     <button class="btn btn-ghost btn-sm" onclick="openApiKeyModal()" title="APIキー設定">🔑</button>
     <button class="btn btn-ghost btn-sm" onclick="openCompareModal()" title="メリタ基準比較">📊</button>
@@ -184,6 +188,11 @@ tr:hover td { background: #f8fafc; }
     <button class="btn btn-primary" style="width:100%;padding:11px;margin-top:4px;" onclick="connect()">接続して開始 →</button>
     <p class="err" id="setup-err"></p>
   </div>
+</div>
+
+<div id="ai-auth-test-notice">
+  <strong>共通AI 認証テストモード</strong><br>
+  在庫Firebaseには接続していません。上部の「AIログイン」だけを使用してください。
 </div>
 
 <div id="app">
@@ -348,7 +357,7 @@ tr:hover td { background: #f8fafc; }
       <div style="font-size:40px;">📄</div>
       <div style="font-size:13px;color:var(--muted);margin-top:4px;">納品書の写真を選択してください</div>
     </div>
-    <input type="file" id="scan-file" accept="image/*" onchange="onScanFileSelect(event)"
+    <input type="file" id="scan-file" accept="image/jpeg,image/png,image/webp" onchange="onScanFileSelect(event)"
       style="display:block;width:100%;margin-top:10px;padding:12px;border:2px dashed var(--border);border-radius:10px;background:var(--bg);font-size:14px;cursor:pointer;color:var(--text);" />
     <div id="scan-img-preview" style="margin-top:10px;text-align:center;display:none;">
       <img id="scan-img-el" style="max-width:100%;max-height:200px;border-radius:8px;object-fit:contain;" />
@@ -356,6 +365,7 @@ tr:hover td { background: #f8fafc; }
     <div id="scan-analyze-area" style="margin-top:12px;display:none;">
       <button class="btn btn-primary" style="width:100%;padding:11px;" onclick="doScanAnalyze()" id="scan-analyze-btn">🤖 AIで解析する</button>
     </div>
+    <div id="scan-ai-shared-note" style="display:none;margin-top:10px;padding:8px 10px;background:#eff6ff;color:#1d4ed8;border-radius:8px;font-size:11px;line-height:1.5;">共用端末では、作業終了後に上部のAIアカウント表示を押してAIログアウトしてください。</div>
     <div id="scan-results" style="margin-top:14px;"></div>
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeOv('ov-scan')">キャンセル</button>
@@ -534,7 +544,17 @@ const SITE_CONFIGS = {
   }
 };
 const _siteParam = (new URLSearchParams(location.search)).get('site') || 'shinwa';
-const _activeSite = SITE_CONFIGS[_siteParam] || SITE_CONFIGS['shinwa'] || null;
+const ACTIVE_SITE_ID = Object.prototype.hasOwnProperty.call(SITE_CONFIGS,_siteParam) ? _siteParam : 'shinwa';
+const _activeSite = SITE_CONFIGS[ACTIVE_SITE_ID] || SITE_CONFIGS['shinwa'] || null;
+const AI_SITE_LABELS={shinwa:'メリタ・シンワ（愛知）',demo:'メリタ・demo',gifu:'メリタ・岐阜',mie:'メリタ・三重'};
+// Phase M5 第1段階: shinwa のみ共通AIを有効化し、他拠点は旧方式を維持する。
+const COMMON_AI_ENABLED_SITES={shinwa:true,demo:false,gifu:false,mie:false};
+const _urlParams=new URLSearchParams(location.search);
+const _isLocalAiTest=(_urlParams.get('ai')==='callable')&&
+  (location.hostname==='localhost'||location.hostname==='127.0.0.1');
+const _isLocalProductionAiAuthTest=(_urlParams.get('ai')==='production-auth')&&
+  (location.hostname==='localhost'||location.hostname==='127.0.0.1');
+const USE_COMMON_AI=COMMON_AI_ENABLED_SITES[ACTIVE_SITE_ID]===true||_isLocalAiTest||_isLocalProductionAiAuthTest;
 if(_activeSite){
   if(_activeSite.supabase){ localStorage.setItem('sb_url',_activeSite.supabase.url); localStorage.setItem('sb_key',_activeSite.supabase.key); }
 }
@@ -579,6 +599,165 @@ let supabaseUrl='', supabaseKey='';
 const PHOTO_BUCKET='parts-photos';
 let photoPartKey=null;
 
+// 共通AIは既存在庫Firebaseとは別の名前付きアプリとして初期化する。
+const COMMON_AI_APP_NAME='shinwa-common-ai';
+const COMMON_AI_CONFIG={
+  apiKey:'AIzaSyBaVsXJZ29o6Mn-AKsgCscXmUY-DyJqzzI',
+  authDomain:'shinwa-service-ai-dev.firebaseapp.com',
+  projectId:'shinwa-service-ai-dev',
+  appId:'1:490107212638:web:41da38cae7f501cd0b35cf',
+  messagingSenderId:'490107212638'
+};
+let commonAiApp=null, commonAiAuth=null;
+let bootstrapAuthorizedUserCallable=null, analyzeInvoiceCallable=null;
+let commonAiAuthorizedUid=null;
+const commonAiBootstrapPromises=new Map();
+let commonAiAuthError=null;
+
+function formatAiError(error){
+  const code=String(error&&error.code||'').replace(/^functions\//,'');
+  const messages={
+    unauthenticated:'Google AIログインが必要です',
+    'permission-denied':`このGoogleアカウントには「${AI_SITE_LABELS[ACTIVE_SITE_ID]}」のAI利用権限がありません`,
+    'invalid-argument':'画像または送信内容が正しくありません',
+    'resource-exhausted':'AI解析の利用上限に達しました。しばらく待ってからお試しください',
+    'already-exists':'この解析リクエストはすでに処理されています',
+    'deadline-exceeded':'AI解析がタイムアウトしました',
+    unavailable:'AI解析サービスへ接続できませんでした',
+    internal:'AI解析結果を処理できませんでした',
+    'failed-precondition':'AI解析サービスの準備が完了していません',
+    'ai/not-initialized':'共通AIを初期化できませんでした',
+    'ai/redirect-started':'Googleログイン画面へ移動します',
+    'auth/popup-closed-by-user':'Googleログインがキャンセルされました',
+    'auth/popup-blocked':'Googleログイン画面を開けませんでした',
+    'auth/unauthorized-domain':'このドメインはGoogleログインに許可されていません'
+  };
+  return messages[code]||'AI解析中にエラーが発生しました';
+}
+
+function updateAiAuthUi(user){
+  const btn=id('ai-auth-btn'); if(!btn) return;
+  btn.style.display=USE_COMMON_AI?'inline-block':'none';
+  if(!USE_COMMON_AI) return;
+  if(user){
+    const label=user.email||user.displayName||'ログイン済み';
+    const prefix=commonAiAuthorizedUid===user.uid?'AI: ':(commonAiAuthError?'AI権限なし: ':'AI確認中: ');
+    btn.textContent=prefix+label;
+    btn.title='クリックすると共通AIからログアウトします';
+  }else{
+    btn.textContent='AIログイン';
+    btn.title='Googleアカウントで共通AIへログインします';
+  }
+}
+
+async function bootstrapAiUser(user){
+  if(!user||!bootstrapAuthorizedUserCallable) throw {code:'ai/not-initialized'};
+  if(commonAiAuthorizedUid===user.uid) return user;
+  if(commonAiBootstrapPromises.has(user.uid)) return commonAiBootstrapPromises.get(user.uid);
+  commonAiAuthError=null;
+  const bootstrapPromise=(async()=>{
+    // emailは送信しない。CallableはFirebase Authトークンだけを使用する。
+    await bootstrapAuthorizedUserCallable({});
+    commonAiAuthorizedUid=user.uid;
+    updateAiAuthUi(user);
+    return user;
+  })();
+  commonAiBootstrapPromises.set(user.uid,bootstrapPromise);
+  try{return await bootstrapPromise;}
+  catch(error){commonAiAuthError=error;throw error;}
+  finally{commonAiBootstrapPromises.delete(user.uid);}
+}
+
+function shouldUseRedirectSignIn(){
+  return /iPhone|iPad|iPod/i.test(navigator.userAgent)||
+    (window.matchMedia&&window.matchMedia('(display-mode: standalone)').matches)||
+    window.navigator.standalone===true;
+}
+
+async function startAiSignIn(){
+  if(!commonAiAuth) throw {code:'ai/not-initialized'};
+  const provider=new firebase.auth.GoogleAuthProvider();
+  if(shouldUseRedirectSignIn()){
+    await commonAiAuth.signInWithRedirect(provider);
+    throw {code:'ai/redirect-started'};
+  }
+  try{
+    const result=await commonAiAuth.signInWithPopup(provider);
+    await bootstrapAiUser(result.user);
+    toast('✅ 共通AIへログインしました。共用端末では作業後にAIログアウトしてください');
+    return result.user;
+  }catch(error){
+    if(String(error&&error.code||'')==='auth/popup-blocked'){
+      await commonAiAuth.signInWithRedirect(provider);
+      throw {code:'ai/redirect-started'};
+    }
+    throw error;
+  }
+}
+
+async function toggleAiAuth(){
+  if(!USE_COMMON_AI){toast('この拠点は現在、従来のAI解析方式です');return;}
+  if(!commonAiAuth){toast('共通AIの初期化に失敗しました');return;}
+  try{
+    if(commonAiAuth.currentUser){
+      if(confirm('共通AIからログアウトしますか？\n共用端末では作業終了後にログアウトしてください。')){
+        await commonAiAuth.signOut();
+      }
+      return;
+    }
+    await startAiSignIn();
+  }catch(error){
+    if(String(error&&error.code||'')!=='ai/redirect-started') toast(formatAiError(error));
+  }
+}
+
+async function ensureAiAuthorized(){
+  if(!USE_COMMON_AI||!commonAiAuth||!analyzeInvoiceCallable) throw {code:'ai/not-initialized'};
+  const user=commonAiAuth.currentUser||await startAiSignIn();
+  return bootstrapAiUser(user);
+}
+
+function initCommonAi(){
+  updateAiAuthUi(null);
+  const note=id('scan-ai-shared-note'); if(note) note.style.display=USE_COMMON_AI?'block':'none';
+  if(!USE_COMMON_AI) return;
+  try{
+    commonAiApp=firebase.apps.find(app=>app.name===COMMON_AI_APP_NAME)||
+      firebase.initializeApp(COMMON_AI_CONFIG,COMMON_AI_APP_NAME);
+    commonAiAuth=commonAiApp.auth();
+    const commonAiFunctions=commonAiApp.functions('asia-northeast1');
+    if(_isLocalAiTest){
+      commonAiAuth.useEmulator('http://127.0.0.1:9099');
+      commonAiFunctions.useEmulator('127.0.0.1',5001);
+    }
+    bootstrapAuthorizedUserCallable=commonAiFunctions.httpsCallable('bootstrapAuthorizedUser');
+    analyzeInvoiceCallable=commonAiFunctions.httpsCallable('analyzeInvoice');
+    commonAiAuth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(()=>{});
+    commonAiAuth.onAuthStateChanged(user=>{
+      if(!user){commonAiAuthorizedUid=null;commonAiAuthError=null;updateAiAuthUi(null);return;}
+      updateAiAuthUi(user);
+      bootstrapAiUser(user).catch(error=>{
+        commonAiAuthorizedUid=null;
+        updateAiAuthUi(user);
+        toast(formatAiError(error));
+      });
+    });
+    commonAiAuth.getRedirectResult().then(result=>{
+      if(result&&result.user){
+        return bootstrapAiUser(result.user).then(()=>{
+          toast('✅ 共通AIへログインしました。共用端末では作業後にAIログアウトしてください');
+        });
+      }
+    }).catch(error=>toast(formatAiError(error)));
+  }catch(error){
+    console.error('共通AI Firebaseの初期化に失敗しました');
+    commonAiApp=null; commonAiAuth=null;
+    updateAiAuthUi(null);
+  }
+}
+
+initCommonAi();
+
 let OPERATORS = _activeSite ? _activeSite.locs : JSON.parse(localStorage.getItem('operators_v1')||'["シンワ倉庫","アラン","ゆーや","しゅん","たくや"]');
 function openOperatorModal(){ renderOperatorList(); open_('ov-operator'); }
 function renderOperatorList(){
@@ -618,11 +797,12 @@ function connect() {
   localStorage.setItem('inv_cfg', JSON.stringify(cfg));
   initFB(cfg);
 }
-function initFB(cfg) {
+async function initFB(cfg) {
   try {
-    if (firebase.apps.length) firebase.app().delete().catch(()=>{});
+    const defaultApp=firebase.apps.find(app=>app.name==='[DEFAULT]');
+    if(defaultApp) await defaultApp.delete();
     firebase.initializeApp(cfg);
-    firebase.auth().signInAnonymously().then(() => {
+    await firebase.auth().signInAnonymously();
       db = firebase.database();
       db.ref('.info/connected').on('value', s => { id('dot').className='dot'+(s.val()?'':' off'); });
       db.ref('parts').on('value', s => { parts=s.val()||{}; render(); updateTabs(); fillTrParts(); });
@@ -633,14 +813,23 @@ function initFB(cfg) {
       });
       id('setup').style.display='none';
       id('app').style.display='block';
-      if(localStorage.getItem('anthropic_key')||(_activeSite&&_activeSite.anthropicKey)) id('scan-btn').style.display='inline-block';
+      if(USE_COMMON_AI||localStorage.getItem('anthropic_key')||(_activeSite&&_activeSite.anthropicKey)) id('scan-btn').style.display='inline-block';
       const sbUrl2=localStorage.getItem('sb_url'), sbKey2=localStorage.getItem('sb_key');
       if(sbUrl2 && sbKey2){ supabaseUrl=sbUrl2.replace(/\/$/,''); supabaseKey=sbKey2; }
-    }).catch(e => { showErr('認証エラー: '+e.message); });
   } catch(e) { showErr('接続エラー: '+e.message); }
 }
 function doLogout() { if(confirm('設定画面に戻りますか？')){localStorage.removeItem('inv_cfg');location.reload();} }
 function tryAutoConnect(){
+  // localhost限定の本番AI認証確認。既存在庫Firebaseへは接続しない。
+  if(_isLocalProductionAiAuthTest){
+    document.body.classList.add('ai-auth-test-mode');
+    id('app-title').textContent='🔐 メリタ共通AI 認証テスト';
+    document.title='メリタ共通AI 認証テスト';
+    id('setup').style.display='none';
+    id('app').style.display='none';
+    id('ai-auth-test-notice').style.display='block';
+    return;
+  }
   // 名前付きサイト（?site=gifu など）はコード内の設定で自動接続
   if(_activeSite){
     if(typeof firebase==='undefined'){ setTimeout(tryAutoConnect,300); return; }
@@ -1029,12 +1218,23 @@ function exportExcel(){
 }
 
 let scanImageBase64 = null, scanImageMime = null, scanParsedItems = [];
+let scanAnalysisProvider=null, scanImportBlocked=true;
+const SCAN_ALLOWED_MIME_TYPES=['image/jpeg','image/png','image/webp'];
+const SCAN_MAX_IMAGE_BYTES=5*1024*1024;
+
+function resetScanAnalysisState(){
+  scanParsedItems=[];
+  scanAnalysisProvider=null;
+  scanImportBlocked=true;
+  id('scan-results').innerHTML='';
+  id('scan-confirm-btn').style.display='none';
+  if(id('scan-memo-div')) id('scan-memo-div').style.display='none';
+}
 
 function openScan(){
-  scanImageBase64=null; scanImageMime=null; scanParsedItems=[];
+  scanImageBase64=null; scanImageMime=null;
+  resetScanAnalysisState();
   id('scan-analyze-area').style.display='none';
-  id('scan-results').innerHTML='';
-  id('scan-confirm-btn').style.display='none'; if(id('scan-memo-div'))id('scan-memo-div').style.display='none';
   id('scan-img-preview').style.display='none';
   id('scan-file').value='';
   open_('ov-scan');
@@ -1042,30 +1242,84 @@ function openScan(){
 
 function onScanFileSelect(e){
   const file=e.target.files[0]; if(!file) return;
-  scanImageMime=file.type||'image/jpeg';
+  resetScanAnalysisState();
+  scanImageBase64=null; scanImageMime=null;
+  id('scan-analyze-area').style.display='none';
+  id('scan-img-preview').style.display='none';
+  if(!SCAN_ALLOWED_MIME_TYPES.includes(file.type)){
+    e.target.value='';
+    id('scan-results').innerHTML='<div style="color:var(--danger);padding:12px;background:#fef2f2;border-radius:8px;">JPEG、PNG、WebP形式の画像を選択してください</div>';
+    return;
+  }
+  if(file.size>SCAN_MAX_IMAGE_BYTES){
+    e.target.value='';
+    id('scan-results').innerHTML='<div style="color:var(--danger);padding:12px;background:#fef2f2;border-radius:8px;">画像サイズは5MB以下にしてください</div>';
+    return;
+  }
+  scanImageMime=file.type;
   const reader=new FileReader();
   reader.onload=function(ev){
-    scanImageBase64=ev.target.result.split(',')[1];
+    scanImageBase64=String(ev.target.result||'').split(',')[1]||null;
+    if(!scanImageBase64){
+      id('scan-results').innerHTML='<div style="color:var(--danger);padding:12px;background:#fef2f2;border-radius:8px;">画像を読み込めませんでした</div>';
+      return;
+    }
     id('scan-img-el').src=ev.target.result;
     id('scan-img-preview').style.display='block';
     id('scan-analyze-area').style.display='block';
-    id('scan-results').innerHTML='';
-    id('scan-confirm-btn').style.display='none'; if(id('scan-memo-div'))id('scan-memo-div').style.display='none';
   };
   reader.readAsDataURL(file);
 }
 
 async function doScanAnalyze(){
-  const apiKey=localStorage.getItem('anthropic_key')||'';
-  if(!apiKey){ openApiKeyModal(); return; }
   if(!scanImageBase64){ toast('画像を選択してください'); return; }
+  if(!SCAN_ALLOWED_MIME_TYPES.includes(scanImageMime)){toast('JPEG、PNG、WebP形式の画像を選択してください');return;}
+  const imageBytes=Math.floor(scanImageBase64.length*3/4)-(scanImageBase64.endsWith('==')?2:scanImageBase64.endsWith('=')?1:0);
+  if(imageBytes<=0){toast('画像を読み込めませんでした');return;}
+  if(imageBytes>SCAN_MAX_IMAGE_BYTES){toast('画像サイズは5MB以下にしてください');return;}
+
+  resetScanAnalysisState();
 
   const btn=id('scan-analyze-btn');
   btn.disabled=true; btn.textContent='🤖 解析中...';
   id('scan-results').innerHTML='<div style="text-align:center;padding:16px;color:var(--muted);">AIが納品書を読み取っています...</div>';
 
   try {
-    const res=await fetch('https://api.anthropic.com/v1/messages',{
+    if(USE_COMMON_AI) await doCommonAiScanAnalyze();
+    else await doLegacyScanAnalyze();
+  } catch(error){
+    resetScanAnalysisState();
+    const message=USE_COMMON_AI?formatAiError(error):(error&&error.message||'解析に失敗しました');
+    id('scan-results').innerHTML=`<div style="color:var(--danger);padding:12px;background:#fef2f2;border-radius:8px;">${esc(message)}</div>`;
+  } finally {
+    btn.disabled=false; btn.textContent='🤖 AIで解析する';
+  }
+}
+
+async function doCommonAiScanAnalyze(){
+  await ensureAiAuthorized();
+  const result=await analyzeInvoiceCallable({
+    schemaVersion:1,
+    requestId:crypto.randomUUID(),
+    manufacturerId:'melitta',
+    siteId:ACTIVE_SITE_ID,
+    mimeType:scanImageMime,
+    imageBase64:scanImageBase64
+  });
+  const response=result&&result.data;
+  if(!response||!Array.isArray(response.items)) throw {code:'functions/internal'};
+  scanAnalysisProvider=response.meta&&response.meta.provider||null;
+  scanParsedItems=response.items;
+  const warnings=Array.isArray(response.warnings)?response.warnings.slice():[];
+  if(scanAnalysisProvider==='mock') warnings.unshift('テスト解析・本番入庫不可');
+  if(scanAnalysisProvider!=='mock'&&scanAnalysisProvider!=='anthropic') warnings.unshift('解析提供元を確認できないため入庫できません');
+  renderScanResults(warnings,{allowImport:scanAnalysisProvider==='anthropic'});
+}
+
+async function doLegacyScanAnalyze(){
+  const apiKey=localStorage.getItem('anthropic_key')||'';
+  if(!apiKey){openApiKeyModal();throw {code:'legacy/api-key-required',message:'Anthropic APIキーを設定してください'};}
+  const res=await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
       headers:{
         'x-api-key':apiKey,
@@ -1084,29 +1338,32 @@ async function doScanAnalyze(){
           ]
         }]
       })
-    });
-    if(!res.ok){const e=await res.json();throw new Error(e.error?.message||'API Error');}
-    const data=await res.json();
-    const text=data.content[0].text;
-    const match=text.match(/\[[\s\S]*?\]/);
-    if(!match) throw new Error('解析結果が読み取れませんでした');
-    scanParsedItems=JSON.parse(match[0]);
-    renderScanResults();
-  } catch(e){
-    id('scan-results').innerHTML=`<div style="color:var(--danger);padding:12px;background:#fef2f2;border-radius:8px;">エラー: ${esc(e.message)}</div>`;
-  }
-  btn.disabled=false; btn.textContent='🤖 AIで解析する';
+  });
+  if(!res.ok){const error=await res.json();throw new Error(error.error?.message||'API Error');}
+  const data=await res.json();
+  const text=data.content[0].text;
+  const match=text.match(/\[[\s\S]*?\]/);
+  if(!match) throw new Error('解析結果が読み取れませんでした');
+  scanAnalysisProvider='legacy-anthropic';
+  scanParsedItems=JSON.parse(match[0]);
+  renderScanResults([],{allowImport:true});
 }
 
-function renderScanResults(){
+function renderScanResults(warnings=[],options={}){
   if(!scanParsedItems.length){
-    id('scan-results').innerHTML='<div style="text-align:center;padding:16px;color:var(--muted);">部品が検出されませんでした</div>';
+    scanParsedItems=[];
+    scanImportBlocked=true;
+    id('scan-confirm-btn').style.display='none';
+    if(id('scan-memo-div')) id('scan-memo-div').style.display='none';
+    const message=warnings[0]||'納品書から部品コードと数量を読み取れませんでした';
+    id('scan-results').innerHTML=`<div style="text-align:center;padding:16px;color:var(--warning);background:#fffbeb;border-radius:8px;">${esc(message)}</div>`;
     return;
   }
   const partsByNo={};
   Object.entries(parts).forEach(([k,p])=>{ if(p.no) partsByNo[String(p.no).trim()]=k; });
 
-  let html='<div style="font-size:13px;font-weight:700;color:var(--muted);margin-bottom:8px;">検出された部品（チェックしたものを入庫）</div>';
+  let html=warnings.length?`<div style="padding:10px;margin-bottom:8px;color:var(--warning);background:#fffbeb;border-radius:8px;font-size:12px;font-weight:${scanAnalysisProvider==='mock'?'700':'400'};">${warnings.map(esc).join('<br>')}</div>`:'';
+  html+='<div style="font-size:13px;font-weight:700;color:var(--muted);margin-bottom:8px;">検出された部品（チェックしたものを入庫）</div>';
   scanParsedItems=scanParsedItems.map((item,i)=>{
     const matchKey=partsByNo[String(item.code).trim()];
     const matchPart=matchKey?parts[matchKey]:null;
@@ -1124,10 +1381,16 @@ function renderScanResults(){
     return item;
   });
   id('scan-results').innerHTML=html;
-  id('scan-confirm-btn').style.display='inline-block'; id('scan-memo-div').style.display='block';
+  scanImportBlocked=options.allowImport!==true;
+  id('scan-confirm-btn').style.display=scanImportBlocked?'none':'inline-block';
+  if(id('scan-memo-div')) id('scan-memo-div').style.display=scanImportBlocked?'none':'block';
 }
 
 async function doScanImport(){
+  if(scanImportBlocked||(USE_COMMON_AI&&scanAnalysisProvider==='mock')){
+    toast(scanAnalysisProvider==='mock'?'テスト解析のため本番入庫はできません':'入庫できる解析結果がありません');
+    return;
+  }
   const targets=scanParsedItems.filter(item=>item._checked&&item._key);
   if(!targets.length){ toast('入庫対象がありません（一致する部品にチェックが必要です）'); return; }
 
