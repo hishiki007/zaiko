@@ -6,7 +6,15 @@
 <title>メリタ部品在庫管理</title>
 <link rel="icon" type="image/png" href="iicom.png" />
 <link rel="apple-touch-icon" href="iicom.png" />
-<link rel="manifest" href="manifest.json" />
+<script>
+(() => {
+  const site = new URLSearchParams(location.search).get('site');
+  const manifest = document.createElement('link');
+  manifest.rel = 'manifest';
+  manifest.href = site === 'mie' ? 'manifest-mie.json' : 'manifest.json';
+  document.head.appendChild(manifest);
+})();
+</script>
 <meta name="theme-color" content="#2563eb" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-title" content="メリタ在庫" />
@@ -561,8 +569,8 @@ const _siteParam = (new URLSearchParams(location.search)).get('site') || 'shinwa
 const ACTIVE_SITE_ID = Object.prototype.hasOwnProperty.call(SITE_CONFIGS,_siteParam) ? _siteParam : 'shinwa';
 const _activeSite = SITE_CONFIGS[ACTIVE_SITE_ID] || SITE_CONFIGS['shinwa'] || null;
 const AI_SITE_LABELS={shinwa:'メリタ・シンワ（愛知）',demo:'メリタ・demo',gifu:'メリタ・岐阜',mie:'メリタ・三重'};
-// Phase M5 第1段階: shinwa のみ共通AIを有効化し、他拠点は旧方式を維持する。
-const COMMON_AI_ENABLED_SITES={shinwa:true,demo:false,gifu:false,mie:false};
+// Phase M8: shinwa と mie で共通AIを有効化し、demo と gifu は旧方式を維持する。
+const COMMON_AI_ENABLED_SITES={shinwa:true,demo:false,gifu:false,mie:true};
 const _urlParams=new URLSearchParams(location.search);
 const _isLocalAiTest=(_urlParams.get('ai')==='callable')&&
   (location.hostname==='localhost'||location.hostname==='127.0.0.1');
