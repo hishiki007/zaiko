@@ -9,9 +9,13 @@
 <script>
 (() => {
   const site = new URLSearchParams(location.search).get('site');
+  const manifests = {
+    mie: 'manifest-mie.json',
+    gifu: 'manifest-gifu.json'
+  };
   const manifest = document.createElement('link');
   manifest.rel = 'manifest';
-  manifest.href = site === 'mie' ? 'manifest-mie.json' : 'manifest.json';
+  manifest.href = manifests[site] || 'manifest.json';
   document.head.appendChild(manifest);
 })();
 </script>
@@ -569,8 +573,8 @@ const _siteParam = (new URLSearchParams(location.search)).get('site') || 'shinwa
 const ACTIVE_SITE_ID = Object.prototype.hasOwnProperty.call(SITE_CONFIGS,_siteParam) ? _siteParam : 'shinwa';
 const _activeSite = SITE_CONFIGS[ACTIVE_SITE_ID] || SITE_CONFIGS['shinwa'] || null;
 const AI_SITE_LABELS={shinwa:'メリタ・シンワ（愛知）',demo:'メリタ・demo',gifu:'メリタ・岐阜',mie:'メリタ・三重'};
-// Phase M8: shinwa と mie で共通AIを有効化し、demo と gifu は旧方式を維持する。
-const COMMON_AI_ENABLED_SITES={shinwa:true,demo:false,gifu:false,mie:true};
+// Phase M9: shinwa、mie、gifu で共通AIを有効化し、demo は旧方式を維持する。
+const COMMON_AI_ENABLED_SITES={shinwa:true,demo:false,gifu:true,mie:true};
 const _urlParams=new URLSearchParams(location.search);
 const _isLocalAiTest=(_urlParams.get('ai')==='callable')&&
   (location.hostname==='localhost'||location.hostname==='127.0.0.1');
