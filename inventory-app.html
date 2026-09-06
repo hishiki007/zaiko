@@ -2294,14 +2294,14 @@ async function runComparison(){
     checkedCodes.add(code);
     var partEntry=Object.entries(parts).find(function(pe){ return String(pe[1].no||'').trim()===code; });
     var part=partEntry?partEntry[1]:null;
-    var actualQty=part?Object.values(part.locs||{}).reduce(function(a,b){return a+b;},0):0;
+    var actualQty=part?LOCS.reduce(function(sum,loc){return sum+Number(part.locs?.[loc]??0);},0):0;
     var diff=actualQty-m.qty;
     results.push({code:code,name:part?part.name:m.name,melitta:m.qty,actual:actualQty,diff:diff,status:!part?'unregistered':diff<0?'shortage':diff>0?'surplus':'match'});
   });
   Object.values(parts).forEach(function(p){
     var code=String(p.no||'').trim();
     if(code&&!checkedCodes.has(code)){
-      var actualQty=Object.values(p.locs||{}).reduce(function(a,b){return a+b;},0);
+      var actualQty=LOCS.reduce(function(sum,loc){return sum+Number(p.locs?.[loc]??0);},0);
       results.push({code:code,name:p.name,melitta:'-',actual:actualQty,diff:null,status:'extra'});
     }
   });
