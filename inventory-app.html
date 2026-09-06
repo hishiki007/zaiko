@@ -2302,7 +2302,7 @@ async function runComparison(){
     var code=String(p.no||'').trim();
     if(code&&!checkedCodes.has(code)){
       var actualQty=LOCS.reduce(function(sum,loc){return sum+Number(p.locs?.[loc]??0);},0);
-      results.push({code:code,name:p.name,melitta:'-',actual:actualQty,diff:null,status:'extra'});
+      results.push({code:code,name:p.name,melitta:'-',actual:actualQty,diff:actualQty>0?actualQty:null,status:actualQty>0?'surplus':'extra'});
     }
   });
   window._cmpResults=results;
